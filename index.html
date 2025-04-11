@@ -89,8 +89,9 @@
         
         .flashcard-front {
             background-color: var(--flashcard-front);
-            color: var(--primary-color);
+            color: black;
             font-size: 2rem;
+            font-weight: bold;
             font-weight: bold;
         }
         
@@ -132,6 +133,7 @@
         .word-item {
             transition: all 0.2s;
             border-left: 4px solid transparent;
+            font-weight: bolder;
         }
         
         .word-item:hover {
@@ -1400,34 +1402,34 @@
                 showQuizResults();
                 return;
             }
-            
+        
             const question = quizQuestions[currentQuizQuestion];
             document.getElementById('quizQuestion').textContent = question.question;
             document.getElementById('quizProgress').textContent = `Question ${currentQuizQuestion + 1} of ${quizQuestions.length}`;
             document.getElementById('quizScore').textContent = `Score: ${quizScore}/${currentQuizQuestion}`;
-            
+        
             const optionsContainer = document.getElementById('quizOptions');
             optionsContainer.innerHTML = '';
-            
+        
             // Shuffle options to randomize their order
             const shuffledOptions = shuffleArray([...question.options]);
-            
-            shuffledOptions.forEach((option, index) => {
+        
+            shuffledOptions.forEach((option) => {
                 const optionElement = document.createElement('button');
                 optionElement.className = 'list-group-item list-group-item-action quiz-option';
                 optionElement.textContent = option;
                 optionElement.dataset.option = option;
                 optionsContainer.appendChild(optionElement);
-                
+        
                 optionElement.addEventListener('click', () => {
                     // Disable all options
-                    document.querySelectorAll('.quiz-option').forEach(opt => {
+                    document.querySelectorAll('.quiz-option').forEach((opt) => {
                         opt.disabled = true;
                     });
-                    
+        
                     // Check if answer is correct
                     const isCorrect = option === question.correctAnswer;
-                    
+        
                     if (isCorrect) {
                         optionElement.classList.add('correct');
                         quizScore++;
@@ -1436,24 +1438,24 @@
                         // Highlight the correct answer
                         document.querySelector(`.quiz-option[data-option="${question.correctAnswer}"]`).classList.add('correct');
                     }
-                    
+        
                     // Record the answer
                     quizAnswers.push({
                         question: question.question,
                         userAnswer: option,
                         correctAnswer: question.correctAnswer,
                         isCorrect,
-                        wordId: question.wordId
+                        wordId: question.wordId,
                     });
-                    
-                    // Enable next button
+        
+                    // Enable the "Next" button
                     document.getElementById('quizNextBtn').disabled = false;
                 });
             });
-            
+        
             // Update navigation buttons
             document.getElementById('quizPrevBtn').classList.toggle('d-none', currentQuizQuestion === 0);
-            document.getElementById('quizNextBtn').disabled = true;
+            document.getElementById('quizNextBtn').disabled = false; // Always enable the "Next" button
         }
         
         document.getElementById('quizPrevBtn').addEventListener('click', () => {
