@@ -1,0 +1,1786 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Vocabulary Master</title>
+    <!-- Firebase SDK -->
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-firestore.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-storage.js"></script>
+    <!-- Bootstrap CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        :root {
+            --primary-color: #4e73df;
+            --secondary-color: #f8f9fc;
+            --accent-color: #2e59d9;
+            --text-color: #5a5c69;
+            --flashcard-front: #f8f9fa;
+            --flashcard-back: #e9ecef;
+            --correct-color: #1cc88a;
+            --wrong-color: #e74a3b;
+        }
+        
+        body {
+            font-family: 'Nunito', sans-serif;
+            color: var(--text-color);
+            background-color: var(--secondary-color);
+        }
+        
+        .navbar-brand {
+            font-weight: 800;
+            font-size: 1.5rem;
+        }
+        
+        .nav-link.active {
+            font-weight: 600;
+            color: var(--primary-color) !important;
+        }
+        
+        .card {
+            border: none;
+            border-radius: 0.35rem;
+            box-shadow: 0 0.15rem 1.75rem 0 rgba(58, 59, 69, 0.15);
+        }
+        
+        .card-header {
+            background-color: var(--primary-color);
+            color: white;
+            font-weight: 600;
+            border-radius: 0.35rem 0.35rem 0 0 !important;
+        }
+        
+        /* Flashcard styles */
+        .flashcard-container {
+            perspective: 1000px;
+            width: 100%;
+            max-width: 600px;
+            margin: 0 auto;
+        }
+        
+        .flashcard {
+            width: 100%;
+            aspect-ratio: 3/4;
+            transform-style: preserve-3d;
+            transition: transform 0.6s;
+            position: relative;
+        }
+        
+        .flashcard.flipped {
+            transform: rotateY(180deg);
+        }
+        
+        .flashcard-face {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            backface-visibility: hidden;
+            border-radius: 0.35rem;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            padding: 2rem;
+            box-shadow: 0 0.15rem 1.75rem 0 rgba(58, 59, 69, 0.15);
+        }
+        
+        .flashcard-front {
+            background-color: var(--flashcard-front);
+            color: var(--primary-color);
+            font-size: 2rem;
+            font-weight: bold;
+        }
+        
+        .flashcard-back {
+            background-color: var(--flashcard-back);
+            transform: rotateY(180deg);
+            font-size: 1.2rem;
+        }
+        
+        .flashcard-nav {
+            position: absolute;
+            bottom: 1rem;
+            width: calc(100% - 4rem);
+            display: flex;
+            justify-content: space-between;
+        }
+        
+        /* Quiz styles */
+        .quiz-option {
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        
+        .quiz-option:hover {
+            background-color: rgba(78, 115, 223, 0.1);
+        }
+        
+        .quiz-option.correct {
+            background-color: rgba(28, 200, 138, 0.2);
+            border-left: 4px solid var(--correct-color);
+        }
+        
+        .quiz-option.wrong {
+            background-color: rgba(231, 74, 59, 0.2);
+            border-left: 4px solid var(--wrong-color);
+        }
+        
+        /* Word list styles */
+        .word-item {
+            transition: all 0.2s;
+            border-left: 4px solid transparent;
+        }
+        
+        .word-item:hover {
+            background-color: rgba(78, 115, 223, 0.05);
+        }
+        
+        .word-item.marked {
+            border-left: 4px solid var(--primary-color);
+        }
+        
+        .synonym-antonym-badge {
+            cursor: pointer;
+            margin-right: 0.3rem;
+            margin-bottom: 0.3rem;
+        }
+        
+        /* Filter dropdown */
+        .filter-dropdown {
+            min-width: 150px;
+            padding: 1rem;
+        }
+        
+        /* JSON input styling */
+        #jsonInput {
+            font-family: monospace;
+            min-height: 200px;
+        }
+        
+        /* Responsive adjustments */
+        @media (max-width: 768px) {
+            .flashcard-front {
+                font-size: 1.5rem;
+            }
+            
+            .flashcard-back {
+                font-size: 1rem;
+            }
+            .dropdown-menu {
+                left: auto !important; /* Override default left alignment */
+                right: 0 !important; /* Align to the right */
+                width: 100%; /* Make it full-width */
+                max-width: 300px; /* Optional: Limit the width */
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Navigation -->
+    <nav class="navbar navbar-expand-lg navbar-dark bg-primary shadow">
+        <div class="container">
+            <a class="navbar-brand" href="#">VocabMaster</a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav me-auto">
+                    <li class="nav-item">
+                        <a class="nav-link active" href="#" id="addWordTab">Add Words</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="#" id="reviewTab">Review</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="#" id="quizTab">Quiz</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="#" id="matchingTab">Matching</a>
+                    </li>
+                </ul>
+                <div class="d-flex">
+                    <div class="dropdown">
+                        <button class="btn btn-outline-light dropdown-toggle" type="button" id="filterDropdown" data-bs-toggle="dropdown">
+                            <i class="fas fa-filter"></i> Filters
+                        </button>
+                        <div class="dropdown-menu dropdown-menu-end filter-dropdown" aria-labelledby="filterDropdown">
+                            <h6 class="dropdown-header">Review Mode</h6>
+                            <div class="form-check ms-3 mb-2">
+                                <input class="form-check-input" type="radio" name="reviewMode" id="listMode" value="list" checked>
+                                <label class="form-check-label" for="listMode">List View</label>
+                            </div>
+                            <div class="form-check ms-3 mb-3">
+                                <input class="form-check-input" type="radio" name="reviewMode" id="flashcardMode" value="flashcard">
+                                <label class="form-check-label" for="flashcardMode">Flashcards</label>
+                            </div>
+                            
+                            <h6 class="dropdown-header">Time Filter</h6>
+                            <select class="form-select mb-3" id="timeFilter">
+                                <option value="all">All Words</option>
+                                <option value="today">Today's Words</option>
+                                <option value="yesterday">Yesterday's Words</option>
+                                <option value="week">This Week</option>
+                                <option value="lastweek">Last Week</option>
+                                <option value="month">This Month</option>
+                                <option value="lastmonth">Last Month</option>
+                                <option value="custom">Custom Range</option>
+                            </select>
+                            
+                            <div id="customRangeContainer" class="mb-3 d-none">
+                                <label class="form-label">Select Days Ago</label>
+                                <select class="form-select" id="customDays">
+                                    <option value="2">2 days ago</option>
+                                    <option value="3">3 days ago</option>
+                                    <option value="5">5 days ago</option>
+                                    <option value="7">7 days ago</option>
+                                    <option value="10">10 days ago</option>
+                                    <option value="15">15 days ago</option>
+                                    <option value="30">30 days ago</option>
+                                    <option value="60">60 days ago</option>
+                                </select>
+                            </div>
+                            
+                            <h6 class="dropdown-header">Other Filters</h6>
+                            <div class="form-check ms-3 mb-2">
+                                <input class="form-check-input" type="checkbox" id="markedOnly">
+                                <label class="form-check-label" for="markedOnly">Marked Words Only</label>
+                            </div>
+                            <div class="form-check ms-3 mb-3">
+                                <input class="form-check-input" type="checkbox" id="wrongOnly">
+                                <label class="form-check-label" for="wrongOnly">Frequently Wrong Words</label>
+                            </div>
+                            
+                            <h6 class="dropdown-header">Sort By</h6>
+                            <select class="form-select" id="sortBy">
+                                <option value="random">Random</option>
+                                <option value="newest">Newest First</option>
+                                <option value="oldest">Oldest First</option>
+                                <option value="alphabetical">A-Z</option>
+                                <option value="reverseAlpha">Z-A</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container py-4">
+        <!-- Add Word Section -->
+        <div id="addWordSection">
+            <div class="row">
+                <div class="col-md-6">
+                    <div class="card mb-4">
+                        <div class="card-header">
+                            <i class="fas fa-plus-circle me-2"></i>Add Word Manually
+                        </div>
+                        <div class="card-body">
+                            <form id="manualWordForm">
+                                <div class="mb-3">
+                                    <label for="wordInput" class="form-label">Word*</label>
+                                    <input type="text" class="form-control" id="wordInput" required>
+                                </div>
+                                <div class="mb-3">
+                                    <label for="meaningInput" class="form-label">Meaning</label>
+                                    <textarea class="form-control" id="meaningInput" rows="2"></textarea>
+                                </div>
+                                <div class="mb-3">
+                                    <label for="synonymsInput" class="form-label">Synonyms (comma separated)</label>
+                                    <input type="text" class="form-control" id="synonymsInput">
+                                </div>
+                                <div class="mb-3">
+                                    <label for="antonymsInput" class="form-label">Antonyms (comma separated)</label>
+                                    <input type="text" class="form-control" id="antonymsInput">
+                                </div>
+                                <div class="mb-3">
+                                    <label for="sentenceInput" class="form-label">Example Sentence</label>
+                                    <textarea class="form-control" id="sentenceInput" rows="2"></textarea>
+                                </div>
+                                <div class="mb-3">
+                                    <label for="wrongOptionsInput" class="form-label">Wrong Options for Quiz (comma separated, min 3)</label>
+                                    <input type="text" class="form-control" id="wrongOptionsInput">
+                                </div>
+                                <button type="submit" class="btn btn-primary">Add Word</button>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="card mb-4">
+                        <div class="card-header">
+                            <i class="fas fa-code me-2"></i>Add Words via JSON
+                        </div>
+                        <div class="card-body">
+                            <div class="mb-3">
+                                <label for="jsonInput" class="form-label">Paste JSON Array of Words</label>
+                                <textarea class="form-control" id="jsonInput" rows="12"></textarea>
+                                <small class="text-muted">Format: {"word": "", "meaning": "", "synonyms": [], "antonyms": [], "sentence": "", "wrongOptions": []}</small>
+                            </div>
+                            <button id="importJsonBtn" class="btn btn-primary">Import Words</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Review Section -->
+        <div id="reviewSection" class="d-none">
+            <div class="card mb-4">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <div>
+                        <i class="fas fa-book-open me-2"></i>Review Words
+                    </div>
+                    <div>
+                        <input type="text" id="wordSearch" class="form-control form-control-sm" placeholder="Search words...">
+                    </div>
+                </div>
+                <div class="card-body">
+                    <!-- List View -->
+                    <div id="listView">
+                        <div class="table-responsive">
+                            <table class="table table-hover">
+                                <thead>
+                                    <tr>
+                                        <th>Word</th>
+                                        <th>Meaning</th>
+                                        <th>Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="wordListBody">
+                                    <!-- Word items will be populated here -->
+                                </tbody>
+                            </table>
+                        </div>
+                        <div class="d-flex justify-content-center mt-3">
+                            <nav>
+                                <ul class="pagination" id="wordListPagination">
+                                    <!-- Pagination will be added here -->
+                                </ul>
+                            </nav>
+                        </div>
+                    </div>
+                    
+                    <!-- Flashcard View -->
+                    <div id="flashcardView" class="d-none">
+                        <div class="flashcard-container mb-4">
+                            <div class="flashcard" id="flashcard">
+                                <div class="flashcard-face flashcard-front">
+                                    <div id="flashcardFrontContent"></div>
+                                </div>
+                                <div class="flashcard-face flashcard-back">
+                                    <div id="flashcardBackContent"></div>
+                                    <div class="flashcard-nav">
+                                        <button class="btn btn-sm btn-outline-primary" id="markFlashcardBtn">
+                                            <i class="far fa-bookmark"></i> Mark
+                                        </button>
+                                        <div>
+                                            <span id="flashcardCounter">1/10</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="d-flex justify-content-center">
+                            <button class="btn btn-primary mx-2" id="prevFlashcardBtn">
+                                <i class="fas fa-arrow-left"></i> Previous
+                            </button>
+                            <button class="btn btn-primary mx-2" id="flipFlashcardBtn">
+                                <i class="fas fa-sync-alt"></i> Flip
+                            </button>
+                            <button class="btn btn-primary mx-2" id="nextFlashcardBtn">
+                                Next <i class="fas fa-arrow-right"></i>
+                            </button>
+                        </div>
+                        <div class="mt-3 text-center">
+                            <div class="btn-group" role="group">
+                                <input type="radio" class="btn-check" name="flashcardMode" id="wordMode" autocomplete="off" checked>
+                                <label class="btn btn-outline-primary" for="wordMode">Word</label>
+                                
+                                <input type="radio" class="btn-check" name="flashcardMode" id="meaningMode" autocomplete="off">
+                                <label class="btn btn-outline-primary" for="meaningMode">Meaning</label>
+                                
+                                <input type="radio" class="btn-check" name="flashcardMode" id="mixedMode" autocomplete="off">
+                                <label class="btn btn-outline-primary" for="mixedMode">Mixed</label>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Quiz Section -->
+        <div id="quizSection" class="d-none">
+            <div class="card mb-4">
+                <div class="card-header">
+                    <i class="fas fa-question-circle me-2"></i>Vocabulary Quiz
+                </div>
+                <div class="card-body">
+                    <div id="quizSetup" class="mb-4">
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">Quiz Type</label>
+                                <select class="form-select" id="quizType">
+                                    <option value="meaning">Meaning to Word</option>
+                                    <option value="synonym">Find Synonym</option>
+                                </select>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">Number of Questions</label>
+                                <select class="form-select" id="quizCount">
+                                    <option value="10">10</option>
+                                    <option value="20">20</option>
+                                    <option value="30">30</option>
+                                    <option value="50">50</option>
+                                </select>
+                            </div>
+                        </div>
+                        <button id="startQuizBtn" class="btn btn-primary">Start Quiz</button>
+                    </div>
+                    
+                    <div id="quizArea" class="d-none">
+                        <div class="d-flex justify-content-between mb-3">
+                            <div id="quizProgress">Question 1 of 10</div>
+                            <div id="quizScore">Score: 0/0</div>
+                        </div>
+                        <div class="card mb-3">
+                            <div class="card-body">
+                                <h5 id="quizQuestion" class="card-title"></h5>
+                            </div>
+                        </div>
+                        <div id="quizOptions" class="list-group">
+                            <!-- Quiz options will be populated here -->
+                        </div>
+                        <div class="d-flex justify-content-between mt-3">
+                            <button id="quizPrevBtn" class="btn btn-secondary d-none">Previous</button>
+                            <button id="quizNextBtn" class="btn btn-primary ms-auto">Next</button>
+                        </div>
+                    </div>
+                    
+                    <div id="quizResults" class="d-none">
+                        <div class="card">
+                            <div class="card-header bg-success text-white">
+                                <i class="fas fa-trophy me-2"></i>Quiz Results
+                            </div>
+                            <div class="card-body">
+                                <h4 class="card-title">Your Score: <span id="finalScore">0</span>/<span id="totalQuestions">0</span></h4>
+                                <p id="quizFeedback" class="card-text"></p>
+                                <div id="wrongAnswers" class="mt-4">
+                                    <h5>Review Mistakes:</h5>
+                                    <!-- Wrong answers will be listed here -->
+                                </div>
+                                <button id="retryQuizBtn" class="btn btn-primary mt-3">Try Again</button>
+                                <button id="newQuizBtn" class="btn btn-outline-primary mt-3">New Quiz</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Matching Section -->
+        <div id="matchingSection" class="d-none">
+            <div class="card mb-4">
+                <div class="card-header">
+                    <i class="fas fa-random me-2"></i>Matching Game
+                </div>
+                <div class="card-body">
+                    <div id="matchingSetup" class="mb-4">
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">Number of Pairs</label>
+                                <select class="form-select" id="matchingCount">
+                                    <option value="5">5</option>
+                                    <option value="10" selected>10</option>
+                                    <option value="15">15</option>
+                                    <option value="20">20</option>
+                                </select>
+                            </div>
+                        </div>
+                        <button id="startMatchingBtn" class="btn btn-primary">Start Matching</button>
+                    </div>
+                    
+                    <div id="matchingGame" class="d-none">
+                        <div class="d-flex justify-content-between mb-3">
+                            <div id="matchingProgress">Pairs matched: 0/10</div>
+                            <div id="matchingTimer">Time: 0:00</div>
+                        </div>
+                        <div class="row">
+                            <div class="col-md-6">
+                                <h5 class="text-center mb-3">Words</h5>
+                                <div id="wordColumn" class="list-group">
+                                    <!-- Words will be populated here -->
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <h5 class="text-center mb-3">Meanings</h5>
+                                <div id="meaningColumn" class="list-group">
+                                    <!-- Meanings will be populated here -->
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div id="matchingResults" class="d-none">
+                        <div class="card">
+                            <div class="card-header bg-success text-white">
+                                <i class="fas fa-check-circle me-2"></i>Matching Results
+                            </div>
+                            <div class="card-body">
+                                <h4 class="card-title">You matched all pairs!</h4>
+                                <p class="card-text">Time taken: <span id="matchingTimeTaken">0:00</span></p>
+                                <button id="playAgainBtn" class="btn btn-primary">Play Again</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Word Detail Modal -->
+    <div class="modal fade" id="wordDetailModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="wordDetailTitle"></h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <h6>Meaning:</h6>
+                            <p id="wordDetailMeaning"></p>
+                        </div>
+                        <div class="col-md-6">
+                            <h6>Example Sentence:</h6>
+                            <p id="wordDetailSentence" class="fst-italic"></p>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6">
+                            <h6>Synonyms:</h6>
+                            <div id="wordDetailSynonyms"></div>
+                        </div>
+                        <div class="col-md-6">
+                            <h6>Antonyms:</h6>
+                            <div id="wordDetailAntonyms"></div>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                    <button type="button" class="btn btn-primary" id="editWordBtn">Edit</button>
+                    <button type="button" class="btn btn-danger" id="deleteWordBtn">Delete</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Edit Word Modal -->
+    <div class="modal fade" id="editWordModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Edit Word</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="editWordForm">
+                        <input type="hidden" id="editWordId">
+                        <div class="mb-3">
+                            <label for="editWordInput" class="form-label">Word*</label>
+                            <input type="text" class="form-control" id="editWordInput" required>
+                        </div>
+                        <div class="mb-3">
+                            <label for="editMeaningInput" class="form-label">Meaning</label>
+                            <textarea class="form-control" id="editMeaningInput" rows="2"></textarea>
+                        </div>
+                        <div class="mb-3">
+                            <label for="editSynonymsInput" class="form-label">Synonyms (comma separated)</label>
+                            <input type="text" class="form-control" id="editSynonymsInput">
+                        </div>
+                        <div class="mb-3">
+                            <label for="editAntonymsInput" class="form-label">Antonyms (comma separated)</label>
+                            <input type="text" class="form-control" id="editAntonymsInput">
+                        </div>
+                        <div class="mb-3">
+                            <label for="editSentenceInput" class="form-label">Example Sentence</label>
+                            <textarea class="form-control" id="editSentenceInput" rows="2"></textarea>
+                        </div>
+                        <div class="mb-3">
+                            <label for="editWrongOptionsInput" class="form-label">Wrong Options for Quiz (comma separated, min 3)</label>
+                            <input type="text" class="form-control" id="editWrongOptionsInput">
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="button" class="btn btn-primary" id="saveEditWordBtn">Save Changes</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Bootstrap JS Bundle with Popper -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    
+    <script>
+        // Firebase configuration
+        const firebaseConfig = {
+            apiKey: "AIzaSyCV4tM0lGEu1w46YjCkP3j_OKFiGQZDadY",
+  authDomain: "vocab-bfafe.firebaseapp.com",
+  databaseURL: "https://vocab-bfafe-default-rtdb.firebaseio.com",
+  projectId: "vocab-bfafe",
+  storageBucket: "vocab-bfafe.firebasestorage.app",
+  messagingSenderId: "503851407373",
+  appId: "1:503851407373:web:9ae98ad47e4852fb1f1d44"
+        };
+        
+        // Initialize Firebase
+        firebase.initializeApp(firebaseConfig);
+        const db = firebase.firestore();
+        const storage = firebase.storage();
+        
+        // DOM elements
+        const addWordSection = document.getElementById('addWordSection');
+        const reviewSection = document.getElementById('reviewSection');
+        const quizSection = document.getElementById('quizSection');
+        const matchingSection = document.getElementById('matchingSection');
+        
+        const addWordTab = document.getElementById('addWordTab');
+        const reviewTab = document.getElementById('reviewTab');
+        const quizTab = document.getElementById('quizTab');
+        const matchingTab = document.getElementById('matchingTab');
+        
+        // Tab switching
+        addWordTab.addEventListener('click', () => {
+            addWordTab.classList.add('active');
+            reviewTab.classList.remove('active');
+            quizTab.classList.remove('active');
+            matchingTab.classList.remove('active');
+            
+            addWordSection.classList.remove('d-none');
+            reviewSection.classList.add('d-none');
+            quizSection.classList.add('d-none');
+            matchingSection.classList.add('d-none');
+        });
+        
+        reviewTab.addEventListener('click', () => {
+            addWordTab.classList.remove('active');
+            reviewTab.classList.add('active');
+            quizTab.classList.remove('active');
+            matchingTab.classList.remove('active');
+            
+            addWordSection.classList.add('d-none');
+            reviewSection.classList.remove('d-none');
+            quizSection.classList.add('d-none');
+            matchingSection.classList.add('d-none');
+            
+            loadWordsForReview();
+        });
+        
+        quizTab.addEventListener('click', () => {
+            addWordTab.classList.remove('active');
+            reviewTab.classList.remove('active');
+            quizTab.classList.add('active');
+            matchingTab.classList.remove('active');
+            
+            addWordSection.classList.add('d-none');
+            reviewSection.classList.add('d-none');
+            quizSection.classList.remove('d-none');
+            matchingSection.classList.add('d-none');
+        });
+        
+        matchingTab.addEventListener('click', () => {
+            addWordTab.classList.remove('active');
+            reviewTab.classList.remove('active');
+            quizTab.classList.remove('active');
+            matchingTab.classList.add('active');
+            
+            addWordSection.classList.add('d-none');
+            reviewSection.classList.add('d-none');
+            quizSection.classList.add('d-none');
+            matchingSection.classList.remove('d-none');
+        });
+        
+        // Manual word form submission
+        document.getElementById('manualWordForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const word = document.getElementById('wordInput').value.trim();
+            const meaning = document.getElementById('meaningInput').value.trim();
+            const synonyms = document.getElementById('synonymsInput').value.trim().split(',').map(s => s.trim()).filter(s => s);
+            const antonyms = document.getElementById('antonymsInput').value.trim().split(',').map(s => s.trim()).filter(s => s);
+            const sentence = document.getElementById('sentenceInput').value.trim();
+            const wrongOptions = document.getElementById('wrongOptionsInput').value.trim().split(',').map(s => s.trim()).filter(s => s);
+            
+            if (!word) {
+                alert('Word is required');
+                return;
+            }
+            
+            try {
+                await db.collection('vocabulary').add({
+                    word,
+                    meaning,
+                    synonyms,
+                    antonyms,
+                    sentence,
+                    wrongOptions,
+                    createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+                    marked: false,
+                    wrongCount: 0,
+                    lastReviewed: null
+                });
+                
+                alert('Word added successfully!');
+                document.getElementById('manualWordForm').reset();
+            } catch (error) {
+                console.error('Error adding word: ', error);
+                alert('Error adding word. Please try again.');
+            }
+        });
+        
+        // JSON import
+        document.getElementById('importJsonBtn').addEventListener('click', async () => {
+            const jsonInput = document.getElementById('jsonInput').value.trim();
+            
+            if (!jsonInput) {
+                alert('Please paste JSON data');
+                return;
+            }
+            
+            try {
+                const words = JSON.parse(jsonInput);
+                
+                if (!Array.isArray(words)) {
+                    throw new Error('Input should be an array of word objects');
+                }
+                
+                const batch = db.batch();
+                const wordsCollection = db.collection('vocabulary');
+                
+                for (const wordData of words) {
+                    if (!wordData.word) {
+                        continue; // Skip if word is missing
+                    }
+                    
+                    const wordRef = wordsCollection.doc();
+                    batch.set(wordRef, {
+                        word: wordData.word,
+                        meaning: wordData.meaning || '',
+                        synonyms: wordData.synonyms || [],
+                        antonyms: wordData.antonyms || [],
+                        sentence: wordData.sentence || '',
+                        wrongOptions: wordData.wrongOptions || [],
+                        createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+                        marked: false,
+                        wrongCount: 0,
+                        lastReviewed: null
+                    });
+                }
+                
+                await batch.commit();
+                alert(`${words.length} words imported successfully!`);
+                document.getElementById('jsonInput').value = '';
+            } catch (error) {
+                console.error('Error importing words: ', error);
+                alert('Error importing words. Please check your JSON format.');
+            }
+        });
+        
+        // Review section functionality
+        let currentWords = [];
+        let currentFlashcardIndex = 0;
+        let flashcards = [];
+        
+        async function loadWordsForReview() {
+            try {
+                let query = db.collection('vocabulary');
+        
+                // Apply filters only for review mode
+                const timeFilter = document.getElementById('timeFilter').value;
+                const markedOnly = document.getElementById('markedOnly').checked;
+                const wrongOnly = document.getElementById('wrongOnly').checked;
+                const sortBy = document.getElementById('sortBy').value;
+        
+                if (markedOnly) {
+                    query = query.where('marked', '==', true);
+                }
+        
+                if (wrongOnly) {
+                    query = query.where('wrongCount', '>', 0);
+                }
+        
+                if (timeFilter !== 'all') {
+                    const now = new Date();
+                    let startDate = new Date();
+        
+                    switch (timeFilter) {
+                        case 'today':
+                            startDate.setHours(0, 0, 0, 0);
+                            break;
+                        case 'yesterday':
+                            startDate.setDate(startDate.getDate() - 1);
+                            startDate.setHours(0, 0, 0, 0);
+                            const endDate = new Date(startDate);
+                            endDate.setDate(endDate.getDate() + 1);
+                            query = query.where('createdAt', '>=', startDate)
+                                        .where('createdAt', '<', endDate);
+                            break;
+                        case 'week':
+                            startDate.setDate(startDate.getDate() - 7);
+                            break;
+                        case 'lastweek':
+                            startDate.setDate(startDate.getDate() - 14);
+                            const lastWeekEnd = new Date(startDate);
+                            lastWeekEnd.setDate(lastWeekEnd.getDate() + 7);
+                            query = query.where('createdAt', '>=', startDate)
+                                        .where('createdAt', '<', lastWeekEnd);
+                            break;
+                        case 'month':
+                            startDate.setMonth(startDate.getMonth() - 1);
+                            break;
+                        case 'lastmonth':
+                            startDate.setMonth(startDate.getMonth() - 2);
+                            const lastMonthEnd = new Date(startDate);
+                            lastMonthEnd.setMonth(lastMonthEnd.getMonth() + 1);
+                            query = query.where('createdAt', '>=', startDate)
+                                        .where('createdAt', '<', lastMonthEnd);
+                            break;
+                        case 'custom':
+                            const daysAgo = parseInt(document.getElementById('customDays').value);
+                            startDate.setDate(startDate.getDate() - daysAgo);
+                            const customEnd = new Date(startDate);
+                            customEnd.setDate(customEnd.getDate() + 1);
+                            query = query.where('createdAt', '>=', startDate)
+                                        .where('createdAt', '<', customEnd);
+                            break;
+                    }
+        
+                    if (timeFilter !== 'yesterday' && timeFilter !== 'lastweek' && timeFilter !== 'custom') {
+                        query = query.where('createdAt', '>=', startDate);
+                    }
+                }
+        
+                // Apply sorting
+                switch (sortBy) {
+                    case 'newest':
+                        query = query.orderBy('createdAt', 'desc');
+                        break;
+                    case 'oldest':
+                        query = query.orderBy('createdAt', 'asc');
+                        break;
+                    case 'alphabetical':
+                        query = query.orderBy('word', 'asc');
+                        break;
+                    case 'reverseAlpha':
+                        query = query.orderBy('word', 'desc');
+                        break;
+                    case 'random':
+                        // For random, we'll sort by a random field or shuffle later
+                        break;
+                }
+        
+                const snapshot = await query.get();
+                currentWords = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        
+                if (sortBy === 'random') {
+                    // Shuffle the array
+                    currentWords = shuffleArray(currentWords);
+                }
+        
+                updateReviewView();
+            } catch (error) {
+                console.error('Error loading words: ', error);
+                alert('Error loading words. Please try again.');
+            }
+        }
+        
+        function updateReviewView() {
+            const reviewMode = document.querySelector('input[name="reviewMode"]:checked').value;
+            
+            if (reviewMode === 'list') {
+                document.getElementById('listView').classList.remove('d-none');
+                document.getElementById('flashcardView').classList.add('d-none');
+                renderWordList();
+            } else {
+                document.getElementById('listView').classList.add('d-none');
+                document.getElementById('flashcardView').classList.remove('d-none');
+                setupFlashcards();
+            }
+        }
+        
+        function renderWordList() {
+            const wordListBody = document.getElementById('wordListBody');
+            wordListBody.innerHTML = '';
+            
+            const searchTerm = document.getElementById('wordSearch').value.toLowerCase();
+            
+            const filteredWords = currentWords.filter(word => 
+                word.word.toLowerCase().includes(searchTerm) || 
+                word.meaning.toLowerCase().includes(searchTerm)
+            );
+            
+            if (filteredWords.length === 0) {
+                wordListBody.innerHTML = '<tr><td colspan="3" class="text-center">No words found</td></tr>';
+                return;
+            }
+            
+            filteredWords.forEach(word => {
+                const row = document.createElement('tr');
+                row.className = `word-item ${word.marked ? 'marked' : ''}`;
+                row.innerHTML = `
+                    <td><strong>${word.word}</strong></td>
+                    <td>${word.meaning || 'No meaning provided'}</td>
+                    <td>
+                        <button class="btn btn-sm btn-outline-primary view-word-btn" data-id="${word.id}">
+                            <i class="fas fa-eye"></i>
+                        </button>
+                        <button class="btn btn-sm btn-outline-secondary edit-word-btn" data-id="${word.id}">
+                            <i class="fas fa-edit"></i>
+                        </button>
+                        <button class="btn btn-sm btn-outline-danger delete-word-btn" data-id="${word.id}">
+                            <i class="fas fa-trash"></i>
+                        </button>
+                    </td>
+                `;
+                wordListBody.appendChild(row);
+            });
+            
+            // Add event listeners to the buttons
+            document.querySelectorAll('.view-word-btn').forEach(btn => {
+                btn.addEventListener('click', () => showWordDetail(btn.dataset.id));
+            });
+            
+            document.querySelectorAll('.edit-word-btn').forEach(btn => {
+                btn.addEventListener('click', () => editWord(btn.dataset.id));
+            });
+            
+            document.querySelectorAll('.delete-word-btn').forEach(btn => {
+                btn.addEventListener('click', () => deleteWord(btn.dataset.id));
+            });
+        }
+        
+        function setupFlashcards() {
+            flashcards = [...currentWords];
+            currentFlashcardIndex = 0;
+            
+            if (flashcards.length === 0) {
+                document.getElementById('flashcardFrontContent').textContent = 'No words available';
+                document.getElementById('flashcardBackContent').textContent = 'Add words to start reviewing';
+                return;
+            }
+            
+            updateFlashcard();
+        }
+        
+        function updateFlashcard() {
+            if (flashcards.length === 0) return;
+
+            const flashcard = flashcards[currentFlashcardIndex];
+            const flashcardMode = document.querySelector('input[name="flashcardMode"]:checked').value;
+
+            let frontContent = '';
+            let backContent = '';
+
+            if (flashcardMode === 'word') {
+                frontContent = flashcard.word;
+                backContent = `
+                    <p><strong>Meaning:</strong> ${flashcard.meaning || 'No meaning provided'}</p>
+                    ${flashcard.sentence ? `<p class="fst-italic">"${flashcard.sentence}"</p>` : ''}
+                    ${flashcard.synonyms.length > 0 ? `
+                        <p><strong>Synonyms:</strong></p>
+                        <div class="badge-container">
+                            ${flashcard.synonyms.map(s => `<span class="badge bg-primary me-1">${s}</span>`).join('')}
+                        </div>
+                    ` : ''}
+                    ${flashcard.antonyms.length > 0 ? `
+                        <p><strong>Antonyms:</strong></p>
+                        <div class="badge-container">
+                            ${flashcard.antonyms.map(a => `<span class="badge bg-danger me-1">${a}</span>`).join('')}
+                        </div>
+                    ` : ''}
+                `;
+            } else if (flashcardMode === 'meaning') {
+                frontContent = flashcard.meaning || 'No meaning provided';
+                backContent = `
+                    <p><strong>Word:</strong> ${flashcard.word}</p>
+                    ${flashcard.sentence ? `<p class="fst-italic">"${flashcard.sentence}"</p>` : ''}
+                    ${flashcard.synonyms.length > 0 ? `
+                        <p><strong>Synonyms:</strong></p>
+                        <div class="badge-container">
+                            ${flashcard.synonyms.map(s => `<span class="badge bg-primary me-1">${s}</span>`).join('')}
+                        </div>
+                    ` : ''}
+                    ${flashcard.antonyms.length > 0 ? `
+                        <p><strong>Antonyms:</strong></p>
+                        <div class="badge-container">
+                            ${flashcard.antonyms.map(a => `<span class="badge bg-danger me-1">${a}</span>`).join('')}
+                        </div>
+                    ` : ''}
+                `;
+            } else { // mixed
+                if (Math.random() < 0.5) {
+                    frontContent = flashcard.word;
+                    backContent = `
+                        <p><strong>Meaning:</strong> ${flashcard.meaning || 'No meaning provided'}</p>
+                        ${flashcard.sentence ? `<p class="fst-italic">"${flashcard.sentence}"</p>` : ''}
+                        ${flashcard.synonyms.length > 0 ? `
+                            <p><strong>Synonyms:</strong></p>
+                            <div class="badge-container">
+                                ${flashcard.synonyms.map(s => `<span class="badge bg-primary me-1">${s}</span>`).join('')}
+                            </div>
+                        ` : ''}
+                        ${flashcard.antonyms.length > 0 ? `
+                            <p><strong>Antonyms:</strong></p>
+                            <div class="badge-container">
+                                ${flashcard.antonyms.map(a => `<span class="badge bg-danger me-1">${a}</span>`).join('')}
+                            </div>
+                        ` : ''}
+                    `;
+                } else {
+                    frontContent = flashcard.meaning || 'No meaning provided';
+                    backContent = `
+                        <p><strong>Word:</strong> ${flashcard.word}</p>
+                        ${flashcard.sentence ? `<p class="fst-italic">"${flashcard.sentence}"</p>` : ''}
+                        ${flashcard.synonyms.length > 0 ? `
+                            <p><strong>Synonyms:</strong></p>
+                            <div class="badge-container">
+                                ${flashcard.synonyms.map(s => `<span class="badge bg-primary me-1">${s}</span>`).join('')}
+                            </div>
+                        ` : ''}
+                        ${flashcard.antonyms.length > 0 ? `
+                            <p><strong>Antonyms:</strong></p>
+                            <div class="badge-container">
+                                ${flashcard.antonyms.map(a => `<span class="badge bg-danger me-1">${a}</span>`).join('')}
+                            </div>
+                        ` : ''}
+                    `;
+                }
+            }
+
+            document.getElementById('flashcardFrontContent').innerHTML = frontContent;
+            document.getElementById('flashcardBackContent').innerHTML = backContent;
+            document.getElementById('flashcardCounter').textContent = `${currentFlashcardIndex + 1}/${flashcards.length}`;
+
+            // Update mark button state
+            const markBtn = document.getElementById('markFlashcardBtn');
+            if (flashcard.marked) {
+                markBtn.innerHTML = '<i class="fas fa-bookmark"></i> Marked';
+                markBtn.classList.add('active');
+            } else {
+                markBtn.innerHTML = '<i class="far fa-bookmark"></i> Mark';
+                markBtn.classList.remove('active');
+            }
+
+            // Reset flashcard to front
+            document.getElementById('flashcard').classList.remove('flipped');
+        }
+        
+        // Flashcard navigation
+        document.getElementById('prevFlashcardBtn').addEventListener('click', () => {
+            if (flashcards.length === 0) return;
+            
+            currentFlashcardIndex = (currentFlashcardIndex - 1 + flashcards.length) % flashcards.length;
+            updateFlashcard();
+        });
+        
+        document.getElementById('nextFlashcardBtn').addEventListener('click', () => {
+            if (flashcards.length === 0) return;
+            
+            currentFlashcardIndex = (currentFlashcardIndex + 1) % flashcards.length;
+            updateFlashcard();
+        });
+        
+        document.getElementById('flipFlashcardBtn').addEventListener('click', () => {
+            document.getElementById('flashcard').classList.toggle('flipped');
+        });
+        
+        // Mark flashcard
+        document.getElementById('markFlashcardBtn').addEventListener('click', async () => {
+            if (flashcards.length === 0) return;
+            
+            const wordId = flashcards[currentFlashcardIndex].id;
+            const isMarked = !flashcards[currentFlashcardIndex].marked;
+            
+            try {
+                await db.collection('vocabulary').doc(wordId).update({
+                    marked: isMarked
+                });
+                
+                // Update local state
+                flashcards[currentFlashcardIndex].marked = isMarked;
+                const wordIndex = currentWords.findIndex(w => w.id === wordId);
+                if (wordIndex !== -1) {
+                    currentWords[wordIndex].marked = isMarked;
+                }
+                
+                updateFlashcard();
+            } catch (error) {
+                console.error('Error updating mark status: ', error);
+                alert('Error updating mark status. Please try again.');
+            }
+        });
+        
+        // Flashcard mode change
+        document.querySelectorAll('input[name="flashcardMode"]').forEach(radio => {
+            radio.addEventListener('change', updateFlashcard);
+        });
+        
+        // Word search
+        document.getElementById('wordSearch').addEventListener('input', renderWordList);
+        
+        // Filter changes
+        document.getElementById('timeFilter').addEventListener('change', function() {
+            document.getElementById('customRangeContainer').classList.toggle('d-none', this.value !== 'custom');
+            loadWordsForReview();
+        });
+        
+        document.getElementById('customDays').addEventListener('change', loadWordsForReview);
+        document.getElementById('markedOnly').addEventListener('change', loadWordsForReview);
+        document.getElementById('wrongOnly').addEventListener('change', loadWordsForReview);
+        document.getElementById('sortBy').addEventListener('change', loadWordsForReview);
+        
+        document.querySelectorAll('input[name="reviewMode"]').forEach(radio => {
+            radio.addEventListener('change', updateReviewView);
+        });
+        
+        // Word detail modal
+        function showWordDetail(wordId) {
+            const word = currentWords.find(w => w.id === wordId);
+            if (!word) return;
+            
+            document.getElementById('wordDetailTitle').textContent = word.word;
+            document.getElementById('wordDetailMeaning').textContent = word.meaning || 'No meaning provided';
+            document.getElementById('wordDetailSentence').textContent = word.sentence || 'No example sentence provided';
+            
+            const synonymsContainer = document.getElementById('wordDetailSynonyms');
+            synonymsContainer.innerHTML = word.synonyms.length > 0 ? 
+                word.synonyms.map(s => `<span class="badge bg-primary synonym-antonym-badge">${s}</span>`).join('') : 
+                'No synonyms provided';
+            
+            const antonymsContainer = document.getElementById('wordDetailAntonyms');
+            antonymsContainer.innerHTML = word.antonyms.length > 0 ? 
+                word.antonyms.map(a => `<span class="badge bg-danger synonym-antonym-badge">${a}</span>`).join('') : 
+                'No antonyms provided';
+            
+            // Set the data-id attribute for edit and delete buttons
+            document.getElementById('editWordBtn').dataset.id = wordId;
+            document.getElementById('deleteWordBtn').dataset.id = wordId;
+            
+            const modal = new bootstrap.Modal(document.getElementById('wordDetailModal'));
+            modal.show();
+        }
+        
+        // Edit word
+        function editWord(wordId) {
+            const word = currentWords.find(w => w.id === wordId);
+            if (!word) return;
+            
+            document.getElementById('editWordId').value = wordId;
+            document.getElementById('editWordInput').value = word.word;
+            document.getElementById('editMeaningInput').value = word.meaning || '';
+            document.getElementById('editSynonymsInput').value = word.synonyms.join(', ');
+            document.getElementById('editAntonymsInput').value = word.antonyms.join(', ');
+            document.getElementById('editSentenceInput').value = word.sentence || '';
+            document.getElementById('editWrongOptionsInput').value = word.wrongOptions.join(', ');
+            
+            const modal = new bootstrap.Modal(document.getElementById('editWordModal'));
+            modal.show();
+        }
+        
+        document.getElementById('saveEditWordBtn').addEventListener('click', async () => {
+            const wordId = document.getElementById('editWordId').value;
+            const word = document.getElementById('editWordInput').value.trim();
+            const meaning = document.getElementById('editMeaningInput').value.trim();
+            const synonyms = document.getElementById('editSynonymsInput').value.trim().split(',').map(s => s.trim()).filter(s => s);
+            const antonyms = document.getElementById('editAntonymsInput').value.trim().split(',').map(s => s.trim()).filter(s => s);
+            const sentence = document.getElementById('editSentenceInput').value.trim();
+            const wrongOptions = document.getElementById('editWrongOptionsInput').value.trim().split(',').map(s => s.trim()).filter(s => s);
+            
+            if (!word) {
+                alert('Word is required');
+                return;
+            }
+            
+            try {
+                await db.collection('vocabulary').doc(wordId).update({
+                    word,
+                    meaning,
+                    synonyms,
+                    antonyms,
+                    sentence,
+                    wrongOptions
+                });
+                
+                // Update local state
+                const wordIndex = currentWords.findIndex(w => w.id === wordId);
+                if (wordIndex !== -1) {
+                    currentWords[wordIndex] = {
+                        ...currentWords[wordIndex],
+                        word,
+                        meaning,
+                        synonyms,
+                        antonyms,
+                        sentence,
+                        wrongOptions
+                    };
+                }
+                
+                // Update flashcards if in flashcard mode
+                if (!document.getElementById('flashcardView').classList.contains('d-none')) {
+                    const flashcardIndex = flashcards.findIndex(f => f.id === wordId);
+                    if (flashcardIndex !== -1) {
+                        flashcards[flashcardIndex] = {
+                            ...flashcards[flashcardIndex],
+                            word,
+                            meaning,
+                            synonyms,
+                            antonyms,
+                            sentence,
+                            wrongOptions
+                        };
+                        if (flashcardIndex === currentFlashcardIndex) {
+                            updateFlashcard();
+                        }
+                    }
+                }
+                
+                alert('Word updated successfully!');
+                bootstrap.Modal.getInstance(document.getElementById('editWordModal')).hide();
+                renderWordList();
+            } catch (error) {
+                console.error('Error updating word: ', error);
+                alert('Error updating word. Please try again.');
+            }
+        });
+        
+        // Delete word
+        function deleteWord(wordId) {
+            if (!confirm('Are you sure you want to delete this word?')) {
+                return;
+            }
+
+            db.collection('vocabulary').doc(wordId).delete()
+                .then(() => {
+                    // Remove from local state
+                    currentWords = currentWords.filter(w => w.id !== wordId);
+                    flashcards = flashcards.filter(f => f.id !== wordId);
+
+                    if (flashcards.length > 0) {
+                        if (currentFlashcardIndex >= flashcards.length) {
+                            currentFlashcardIndex = Math.max(0, flashcards.length - 1);
+                        }
+                    }
+
+                    alert('Word deleted successfully!');
+
+                    // Safely hide the modal if it exists
+                    const modalInstance = bootstrap.Modal.getInstance(document.getElementById('wordDetailModal'));
+                    if (modalInstance) {
+                        modalInstance.hide();
+                    }
+
+                    updateReviewView();
+                })
+                .catch(error => {
+                    console.error('Error deleting word: ', error);
+                    alert('Error deleting word. Please try again.');
+                });
+        }
+        
+        document.getElementById('deleteWordBtn').addEventListener('click', function() {
+            deleteWord(this.dataset.id);
+        });
+        
+        // Quiz functionality
+        let quizQuestions = [];
+        let currentQuizQuestion = 0;
+        let quizScore = 0;
+        let quizAnswers = [];
+        let quizStartTime;
+        
+        document.getElementById('startQuizBtn').addEventListener('click', async () => {
+            const quizType = document.getElementById('quizType').value;
+            const quizCount = parseInt(document.getElementById('quizCount').value);
+        
+            try {
+                let query = db.collection('vocabulary');
+        
+                // Adjust query based on quiz type
+                if (quizType === 'meaning') {
+                    query = query.where('meaning', '!=', ''); // Ensure words have a meaning
+                } else if (quizType === 'synonym') {
+                    query = query.where('synonyms', 'array-contains-any', ['dummy']); // Dummy value to ensure valid query
+                }
+        
+                const snapshot = await query.get();
+                let words = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        
+                // Additional filtering after fetching documents
+                if (quizType === 'meaning') {
+                    words = words.filter(word => word.meaning && word.wrongOptions && word.wrongOptions.length >= 3);
+                } else if (quizType === 'synonym') {
+                    words = words.filter(word => word.synonyms && word.synonyms.length > 0);
+                }
+        
+                if (words.length === 0) {
+                    alert('No words available for this quiz type. Add words with the required fields first.');
+                    return;
+                }
+        
+                // Shuffle and select the requested number of words
+                words = shuffleArray(words).slice(0, Math.min(quizCount, words.length));
+        
+                // Prepare quiz questions
+                quizQuestions = words.map(word => {
+                    if (quizType === 'meaning') {
+                        return {
+                            type: 'meaning',
+                            question: word.meaning || 'No meaning provided',
+                            correctAnswer: word.word,
+                            options: shuffleArray([word.word, ...word.wrongOptions]).slice(0, 4),
+                            wordId: word.id
+                        };
+                    } else { // synonym
+                        const correctSynonym = word.synonyms[Math.floor(Math.random() * word.synonyms.length)];
+                        const otherWords = shuffleArray(words.filter(w => w.id !== word.id));
+                        let wrongOptions = [];
+        
+                        for (const otherWord of otherWords) {
+                            if (otherWord.synonyms && otherWord.synonyms.length > 0) {
+                                wrongOptions.push(...otherWord.synonyms.filter(s => s !== correctSynonym));
+                                if (wrongOptions.length >= 3) break;
+                            }
+                        }
+        
+                        while (wrongOptions.length < 3 && otherWords.length > 0) {
+                            const otherWord = otherWords.pop();
+                            if (otherWord.word !== correctSynonym) {
+                                wrongOptions.push(otherWord.word);
+                            }
+                        }
+        
+                        while (wrongOptions.length < 3) {
+                            wrongOptions.push('option ' + (wrongOptions.length + 1));
+                        }
+        
+                        return {
+                            type: 'synonym',
+                            question: word.word,
+                            correctAnswer: correctSynonym,
+                            options: shuffleArray([correctSynonym, ...wrongOptions]).slice(0, 4),
+                            wordId: word.id
+                        };
+                    }
+                });
+        
+                currentQuizQuestion = 0;
+                quizScore = 0;
+                quizAnswers = [];
+                quizStartTime = new Date();
+        
+                document.getElementById('quizSetup').classList.add('d-none');
+                document.getElementById('quizArea').classList.remove('d-none');
+                document.getElementById('quizResults').classList.add('d-none');
+        
+                showQuizQuestion();
+            } catch (error) {
+                console.error('Error starting quiz: ', error);
+                alert('Error starting quiz. Please try again.');
+            }
+        });
+        
+        function showQuizQuestion() {
+            if (currentQuizQuestion >= quizQuestions.length) {
+                showQuizResults();
+                return;
+            }
+            
+            const question = quizQuestions[currentQuizQuestion];
+            document.getElementById('quizQuestion').textContent = question.question;
+            document.getElementById('quizProgress').textContent = `Question ${currentQuizQuestion + 1} of ${quizQuestions.length}`;
+            document.getElementById('quizScore').textContent = `Score: ${quizScore}/${currentQuizQuestion}`;
+            
+            const optionsContainer = document.getElementById('quizOptions');
+            optionsContainer.innerHTML = '';
+            
+            // Shuffle options to randomize their order
+            const shuffledOptions = shuffleArray([...question.options]);
+            
+            shuffledOptions.forEach((option, index) => {
+                const optionElement = document.createElement('button');
+                optionElement.className = 'list-group-item list-group-item-action quiz-option';
+                optionElement.textContent = option;
+                optionElement.dataset.option = option;
+                optionsContainer.appendChild(optionElement);
+                
+                optionElement.addEventListener('click', () => {
+                    // Disable all options
+                    document.querySelectorAll('.quiz-option').forEach(opt => {
+                        opt.disabled = true;
+                    });
+                    
+                    // Check if answer is correct
+                    const isCorrect = option === question.correctAnswer;
+                    
+                    if (isCorrect) {
+                        optionElement.classList.add('correct');
+                        quizScore++;
+                    } else {
+                        optionElement.classList.add('wrong');
+                        // Highlight the correct answer
+                        document.querySelector(`.quiz-option[data-option="${question.correctAnswer}"]`).classList.add('correct');
+                    }
+                    
+                    // Record the answer
+                    quizAnswers.push({
+                        question: question.question,
+                        userAnswer: option,
+                        correctAnswer: question.correctAnswer,
+                        isCorrect,
+                        wordId: question.wordId
+                    });
+                    
+                    // Enable next button
+                    document.getElementById('quizNextBtn').disabled = false;
+                });
+            });
+            
+            // Update navigation buttons
+            document.getElementById('quizPrevBtn').classList.toggle('d-none', currentQuizQuestion === 0);
+            document.getElementById('quizNextBtn').disabled = true;
+        }
+        
+        document.getElementById('quizPrevBtn').addEventListener('click', () => {
+            currentQuizQuestion--;
+            showQuizQuestion();
+        });
+        
+        document.getElementById('quizNextBtn').addEventListener('click', () => {
+            currentQuizQuestion++;
+            showQuizQuestion();
+        });
+        
+        function showQuizResults() {
+            document.getElementById('quizArea').classList.add('d-none');
+            document.getElementById('quizResults').classList.remove('d-none');
+            
+            const endTime = new Date();
+            const timeTaken = Math.floor((endTime - quizStartTime) / 1000);
+            const minutes = Math.floor(timeTaken / 60);
+            const seconds = timeTaken % 60;
+            
+            document.getElementById('finalScore').textContent = quizScore;
+            document.getElementById('totalQuestions').textContent = quizQuestions.length;
+            
+            const percentage = (quizScore / quizQuestions.length) * 100;
+            let feedback = '';
+            
+            if (percentage >= 90) {
+                feedback = 'Excellent work! You have a strong vocabulary.';
+            } else if (percentage >= 70) {
+                feedback = 'Good job! You know most of these words well.';
+            } else if (percentage >= 50) {
+                feedback = 'Not bad! Keep practicing to improve.';
+            } else {
+                feedback = 'Keep practicing! Review the words you missed.';
+            }
+            
+            document.getElementById('quizFeedback').textContent = feedback;
+            
+            // Show wrong answers
+            const wrongAnswersContainer = document.getElementById('wrongAnswers');
+            wrongAnswersContainer.innerHTML = '';
+            
+            const wrongAnswers = quizAnswers.filter(a => !a.isCorrect);
+            if (wrongAnswers.length > 0) {
+                wrongAnswers.forEach(answer => {
+                    const word = currentWords.find(w => w.id === answer.wordId) || {};
+                    const answerElement = document.createElement('div');
+                    answerElement.className = 'mb-3';
+                    answerElement.innerHTML = `
+                        <p><strong>Question:</strong> ${answer.question}</p>
+                        <p><strong>Your answer:</strong> <span class="text-danger">${answer.userAnswer}</span></p>
+                        <p><strong>Correct answer:</strong> <span class="text-success">${answer.correctAnswer}</span></p>
+                        ${word.word ? `<p><strong>Word:</strong> ${word.word}</p>` : ''}
+                        ${word.synonyms && word.synonyms.length > 0 ? `<p><strong>Synonyms:</strong> ${word.synonyms.join(', ')}</p>` : ''}
+                        <hr>
+                    `;
+                    wrongAnswersContainer.appendChild(answerElement);
+                });
+            } else {
+                wrongAnswersContainer.innerHTML = '<p>You answered all questions correctly! Well done!</p>';
+            }
+            
+            // Update wrong counts in database
+            updateWrongCounts();
+        }
+        
+        async function updateWrongCounts() {
+            const wrongWordIds = quizAnswers
+                .filter(a => !a.isCorrect)
+                .map(a => a.wordId);
+            
+            // Count occurrences of each word ID
+            const wrongCounts = {};
+            wrongWordIds.forEach(id => {
+                wrongCounts[id] = (wrongCounts[id] || 0) + 1;
+            });
+            
+            // Update each word's wrongCount
+            const batch = db.batch();
+            for (const [wordId, count] of Object.entries(wrongCounts)) {
+                const wordRef = db.collection('vocabulary').doc(wordId);
+                batch.update(wordRef, {
+                    wrongCount: firebase.firestore.FieldValue.increment(count),
+                    lastReviewed: firebase.firestore.FieldValue.serverTimestamp()
+                });
+            }
+            
+            try {
+                await batch.commit();
+            } catch (error) {
+                console.error('Error updating wrong counts: ', error);
+            }
+        }
+        
+        document.getElementById('retryQuizBtn').addEventListener('click', () => {
+            // Reset to first question
+            currentQuizQuestion = 0;
+            quizScore = 0;
+            quizAnswers = [];
+            quizStartTime = new Date();
+            
+            document.getElementById('quizResults').classList.add('d-none');
+            document.getElementById('quizArea').classList.remove('d-none');
+            
+            showQuizQuestion();
+        });
+        
+        document.getElementById('newQuizBtn').addEventListener('click', () => {
+            document.getElementById('quizResults').classList.add('d-none');
+            document.getElementById('quizSetup').classList.remove('d-none');
+        });
+        
+        // Matching game functionality
+        let matchingPairs = [];
+        let matchedPairs = 0;
+        let firstSelection = null;
+        let secondSelection = null;
+        let matchingStartTime;
+        let matchingInterval;
+        
+        document.getElementById('startMatchingBtn').addEventListener('click', async () => {
+            const pairCount = parseInt(document.getElementById('matchingCount').value);
+            
+            try {
+                // Get words for matching game
+                let query = db.collection('vocabulary').where('meaning', '!=', '').limit(50);
+                const snapshot = await query.get();
+                let words = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+                
+                if (words.length < 5) {
+                    alert('Not enough words with meanings available. Add more words first.');
+                    return;
+                }
+                
+                // Shuffle and select the requested number of words
+                words = shuffleArray(words).slice(0, Math.min(pairCount, words.length));
+                
+                // Prepare matching pairs
+                matchingPairs = words.map(word => ({
+                    word: word.word,
+                    meaning: word.meaning,
+                    id: word.id
+                }));
+                
+                matchedPairs = 0;
+                firstSelection = null;
+                secondSelection = null;
+                
+                document.getElementById('matchingSetup').classList.add('d-none');
+                document.getElementById('matchingGame').classList.remove('d-none');
+                document.getElementById('matchingResults').classList.add('d-none');
+                
+                renderMatchingColumns();
+                
+                // Start timer
+                matchingStartTime = new Date();
+                clearInterval(matchingInterval);
+                matchingInterval = setInterval(updateMatchingTimer, 1000);
+                updateMatchingTimer();
+            } catch (error) {
+                console.error('Error starting matching game: ', error);
+                alert('Error starting matching game. Please try again.');
+            }
+        });
+        
+        function renderMatchingColumns() {
+            const wordColumn = document.getElementById('wordColumn');
+            const meaningColumn = document.getElementById('meaningColumn');
+            
+            wordColumn.innerHTML = '';
+            meaningColumn.innerHTML = '';
+            
+            // Shuffle words and meanings separately
+            const shuffledWords = shuffleArray([...matchingPairs]);
+            const shuffledMeanings = shuffleArray([...matchingPairs]);
+            
+            shuffledWords.forEach((pair, index) => {
+                const wordElement = document.createElement('button');
+                wordElement.className = 'list-group-item list-group-item-action matching-word';
+                wordElement.textContent = pair.word;
+                wordElement.dataset.id = pair.id;
+                wordElement.dataset.index = index;
+                wordColumn.appendChild(wordElement);
+                
+                wordElement.addEventListener('click', handleMatchingSelection);
+            });
+            
+            shuffledMeanings.forEach((pair, index) => {
+                const meaningElement = document.createElement('button');
+                meaningElement.className = 'list-group-item list-group-item-action matching-meaning';
+                meaningElement.textContent = pair.meaning;
+                meaningElement.dataset.id = pair.id;
+                meaningElement.dataset.index = index;
+                meaningColumn.appendChild(meaningElement);
+                
+                meaningElement.addEventListener('click', handleMatchingSelection);
+            });
+            
+            document.getElementById('matchingProgress').textContent = `Pairs matched: ${matchedPairs}/${matchingPairs.length}`;
+        }
+        
+        function handleMatchingSelection(e) {
+            const element = e.target;
+
+            // Ignore if already matched or disabled
+            if (element.classList.contains('matched') || element.disabled) {
+                return;
+            }
+
+            // If this is the first selection
+            if (!firstSelection) {
+                firstSelection = {
+                    element,
+                    id: element.dataset.id,
+                    type: element.classList.contains('matching-word') ? 'word' : 'meaning'
+                };
+                element.classList.add('active');
+                return;
+            }
+
+            // Prevent selecting the same element twice
+            if (firstSelection.element === element) {
+                return;
+            }
+
+            // If this is the second selection
+            secondSelection = {
+                element,
+                id: element.dataset.id,
+                type: element.classList.contains('matching-word') ? 'word' : 'meaning'
+            };
+
+            // Disable all elements temporarily
+            document.querySelectorAll('.matching-word, .matching-meaning').forEach(el => {
+                el.disabled = true;
+            });
+
+            // Check if they match (same ID and different types)
+            if (firstSelection.id === secondSelection.id && firstSelection.type !== secondSelection.type) {
+                // Match found
+                firstSelection.element.classList.remove('active');
+                firstSelection.element.classList.add('matched', 'bg-success', 'text-white');
+                secondSelection.element.classList.add('matched', 'bg-success', 'text-white');
+
+                matchedPairs++;
+                document.getElementById('matchingProgress').textContent = `Pairs matched: ${matchedPairs}/${matchingPairs.length}`;
+
+                // Check if game is complete
+                if (matchedPairs === matchingPairs.length) {
+                    clearInterval(matchingInterval);
+                    setTimeout(showMatchingResults, 1000);
+                }
+
+                // Re-enable unmatched elements
+                document.querySelectorAll('.matching-word:not(.matched), .matching-meaning:not(.matched)').forEach(el => {
+                    el.disabled = false;
+                });
+            } else {
+                // No match - reset after delay
+                setTimeout(() => {
+                    if (firstSelection && firstSelection.element) {
+                        firstSelection.element.classList.remove('active');
+                    }
+                    if (secondSelection && secondSelection.element) {
+                        secondSelection.element.classList.remove('active');
+                    }
+
+                    // Re-enable unmatched elements
+                    document.querySelectorAll('.matching-word:not(.matched), .matching-meaning:not(.matched)').forEach(el => {
+                        el.disabled = false;
+                    });
+                }, 1000);
+            }
+
+            // Reset selections
+            firstSelection = null;
+            secondSelection = null;
+        }
+        
+        function updateMatchingTimer() {
+            const now = new Date();
+            const seconds = Math.floor((now - matchingStartTime) / 1000);
+            const minutes = Math.floor(seconds / 60);
+            const remainingSeconds = seconds % 60;
+            
+            document.getElementById('matchingTimer').textContent = 
+                `Time: ${minutes}:${remainingSeconds < 10 ? '0' : ''}${remainingSeconds}`;
+        }
+        
+        function showMatchingResults() {
+            document.getElementById('matchingGame').classList.add('d-none');
+            document.getElementById('matchingResults').classList.remove('d-none');
+            
+            const now = new Date();
+            const seconds = Math.floor((now - matchingStartTime) / 1000);
+            const minutes = Math.floor(seconds / 60);
+            const remainingSeconds = seconds % 60;
+            
+            document.getElementById('matchingTimeTaken').textContent = 
+                `${minutes}:${remainingSeconds < 10 ? '0' : ''}${remainingSeconds}`;
+        }
+        
+        document.getElementById('playAgainBtn').addEventListener('click', () => {
+            document.getElementById('matchingResults').classList.add('d-none');
+            document.getElementById('matchingSetup').classList.remove('d-none');
+        });
+        
+        // Helper functions
+        function shuffleArray(array) {
+            const newArray = [...array];
+            for (let i = newArray.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [newArray[i], newArray[j]] = [newArray[j], newArray[i]];
+            }
+            return newArray;
+        }
+        
+        // Initialize
+        document.addEventListener('DOMContentLoaded', () => {
+            // Set default tab
+            addWordTab.click();
+            
+            // Show/hide custom range based on initial selection
+            document.getElementById('customRangeContainer').classList.toggle('d-none', 
+                document.getElementById('timeFilter').value !== 'custom');
+        });
+    </script>
+</body>
+</html>
