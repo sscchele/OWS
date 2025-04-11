@@ -948,6 +948,11 @@
                         <button class="btn btn-sm btn-outline-danger delete-word-btn" data-id="${word.id}">
                             <i class="fas fa-trash"></i>
                         </button>
+                        ${word.wrongCount > 0 ? `
+                            <button class="btn btn-sm btn-outline-warning remove-wrong-btn" data-id="${word.id}">
+                                <i class="fas fa-eraser"></i>
+                            </button>
+                        ` : ''}
                     </td>
                 `;
                 wordListBody.appendChild(row);
@@ -964,6 +969,10 @@
             
             document.querySelectorAll('.delete-word-btn').forEach(btn => {
                 btn.addEventListener('click', () => deleteWord(btn.dataset.id));
+            });
+
+            document.querySelectorAll('.remove-wrong-btn').forEach(btn => {
+                btn.addEventListener('click', () => removeFromWrongList(btn.dataset.id));
             });
         }
         
@@ -1715,13 +1724,17 @@
                     el.disabled = false;
                 });
             } else {
-                // No match - reset after delay
+                // No match - highlight in red
+                firstSelection.element.classList.add('bg-danger', 'text-white');
+                secondSelection.element.classList.add('bg-danger', 'text-white');
+
+                // Reset after delay
                 setTimeout(() => {
                     if (firstSelection && firstSelection.element) {
-                        firstSelection.element.classList.remove('active');
+                        firstSelection.element.classList.remove('active', 'bg-danger', 'text-white');
                     }
                     if (secondSelection && secondSelection.element) {
-                        secondSelection.element.classList.remove('active');
+                        secondSelection.element.classList.remove('active', 'bg-danger', 'text-white');
                     }
 
                     // Re-enable unmatched elements
@@ -1757,6 +1770,26 @@
             
             document.getElementById('matchingTimeTaken').textContent = 
                 `${minutes}:${remainingSeconds < 10 ? '0' : ''}${remainingSeconds}`;
+
+            // Display all correct matches
+            const wordColumn = document.getElementById('wordColumn');
+            const meaningColumn = document.getElementById('meaningColumn');
+
+            wordColumn.innerHTML = '';
+            meaningColumn.innerHTML = '';
+
+            matchingPairs.forEach(pair => {
+                const wordElement = document.createElement('div');
+                wordElement.className = 'list-group-item bg-success text-white';
+                wordElement.textContent = pair.word;
+
+                const meaningElement = document.createElement('div');
+                meaningElement.className = 'list-group-item bg-success text-white';
+                meaningElement.textContent = pair.meaning;
+
+                wordColumn.appendChild(wordElement);
+                meaningColumn.appendChild(meaningElement);
+            });
         }
         
         document.getElementById('playAgainBtn').addEventListener('click', () => {
@@ -1783,6 +1816,31 @@
             document.getElementById('customRangeContainer').classList.toggle('d-none', 
                 document.getElementById('timeFilter').value !== 'custom');
         });
+
+        async function removeFromWrongList(wordId) {
+            if (!confirm('Are you sure you want to remove this word from the wrong list?')) {
+                return;
+            }
+
+            try {
+                // Update the wrongCount in Firestore
+                await db.collection('vocabulary').doc(wordId).update({
+                    wrongCount: 0
+                });
+
+                // Update the local state
+                const wordIndex = currentWords.findIndex(w => w.id === wordId);
+                if (wordIndex !== -1) {
+                    currentWords[wordIndex].wrongCount = 0;
+                }
+
+                alert('Word removed from the wrong list successfully!');
+                renderWordList();
+            } catch (error) {
+                console.error('Error removing word from wrong list: ', error);
+                alert('Error removing word from the wrong list. Please try again.');
+            }
+        }
     </script>
 </body>
 </html>
