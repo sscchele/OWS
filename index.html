@@ -3,1801 +3,1158 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Vocabulary Master</title>
-    <!-- Firebase SDK -->
-    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-firestore.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-storage.js"></script>
-    <!-- Bootstrap CSS -->
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    <!-- Font Awesome -->
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <title>Word Match Game</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/firebase/9.22.2/firebase-app-compat.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/firebase/9.22.2/firebase-firestore-compat.min.js"></script>
     <style>
         :root {
-            --primary-color: #4e73df;
-            --secondary-color: #f8f9fc;
-            --accent-color: #2e59d9;
-            --text-color: #5a5c69;
-            --flashcard-front: #f8f9fa;
-            --flashcard-back: #e9ecef;
-            --correct-color: #1cc88a;
-            --wrong-color: #e74a3b;
+            --primary: #3a86ff;
+            --secondary: #ff006e;
+            --success: #38b000;
+            --warning: #ffbe0b;
+            --danger: #ff006e;
+            --dark: #1a1a2e;
+            --light: #f8f9fa;
+        }
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
         }
         
         body {
-            font-family: 'Nunito', sans-serif;
-            color: var(--text-color);
-            background-color: var(--secondary-color);
+            background-color: var(--light);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            color: var(--dark);
         }
         
-        .navbar-brand {
-            font-weight: 800;
+        .container {
+            width: 100%;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 1rem;
+            flex: 1;
+        }
+        
+        header {
+            background-color: var(--primary);
+            color: white;
+            padding: 1rem;
+            text-align: center;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        }
+        
+        .btn {
+            padding: 0.75rem 1.5rem;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: all 0.3s ease;
+            margin: 0.5rem;
+        }
+        
+        .btn:hover {
+            opacity: 0.9;
+            transform: translateY(-2px);
+        }
+        
+        .btn-primary {
+            background-color: var(--primary);
+            color: white;
+        }
+        
+        .btn-secondary {
+            background-color: var(--secondary);
+            color: white;
+        }
+        
+        .btn-success {
+            background-color: var(--success);
+            color: white;
+        }
+        
+        .btn-warning {
+            background-color: var(--warning);
+            color: var(--dark);
+        }
+        
+        .btn-danger {
+            background-color: var(--danger);
+            color: white;
+        }
+        
+        .btn-outline {
+            background-color: transparent;
+            border: 1px solid var(--primary);
+            color: var(--primary);
+        }
+        
+        .btn-outline:hover {
+            background-color: var(--primary);
+            color: white;
+        }
+        
+        .home-page {
+            text-align: center;
+            padding: 3rem 1rem;
+        }
+        
+        .home-page h1 {
+            font-size: 3rem;
+            margin-bottom: 1rem;
+            color: var(--primary);
+        }
+        
+        .home-page p {
+            font-size: 1.2rem;
+            margin-bottom: 2rem;
+            max-width: 800px;
+            margin-left: auto;
+            margin-right: auto;
+        }
+        
+        .game-container {
+            display: flex;
+            flex-direction: column;
+            margin: 1rem 0;
+        }
+        
+        .game-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1rem;
+        }
+        
+        .timer {
             font-size: 1.5rem;
+            font-weight: bold;
+            color: var(--primary);
         }
         
-        .nav-link.active {
-            font-weight: 600;
-            color: var(--primary-color) !important;
+        .game-controls {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            margin-bottom: 1rem;
+            gap: 0.5rem;
+        }
+        
+        .card-container {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+            gap: 1rem;
+            margin-top: 1rem;
         }
         
         .card {
-            border: none;
-            border-radius: 0.35rem;
-            box-shadow: 0 0.15rem 1.75rem 0 rgba(58, 59, 69, 0.15);
+            background-color: white;
+            border-radius: 8px;
+            padding: 1rem;
+            cursor: pointer;
+            min-height: 100px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            transition: all 0.3s ease;
+            border: 2px solid transparent;
         }
         
-        .card-header {
-            background-color: var(--primary-color);
-            color: white;
-            font-weight: 600;
-            border-radius: 0.35rem 0.35rem 0 0 !important;
+        .card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 8px 12px rgba(0,0,0,0.15);
         }
         
-        /* Flashcard styles */
-        .flashcard-container {
-            perspective: 1000px;
-            width: 100%;
-            max-width: 600px;
-            margin: 0 auto;
+        .card.selected {
+            border-color: var(--primary);
+            background-color: rgba(58, 134, 255, 0.1);
         }
         
-        .flashcard {
-            width: 100%;
-            aspect-ratio: 3/4;
-            transform-style: preserve-3d;
-            transition: transform 0.6s;
-            position: relative;
+        .card.matched {
+            border-color: var(--success);
+            background-color: rgba(56, 176, 0, 0.1);
+            cursor: default;
         }
         
-        .flashcard.flipped {
-            transform: rotateY(180deg);
-        }
-        
-        .flashcard-face {
+        .filter-menu {
+            background-color: white;
+            border-radius: 8px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+            padding: 1rem;
             position: absolute;
+            top: 120px;
+            right: 20px;
+            z-index: 10;
+            width: 300px;
+            max-width: 90vw;
+        }
+        
+        .filter-menu h3 {
+            margin-bottom: 1rem;
+            color: var(--primary);
+        }
+        
+        .filter-group {
+            margin-bottom: 1rem;
+        }
+        
+        .filter-group label {
+            display: block;
+            margin-bottom: 0.5rem;
+            font-weight: bold;
+        }
+        
+        .letter-filter {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.3rem;
+            margin-bottom: 1rem;
+        }
+        
+        .letter-btn {
+            width: 2rem;
+            height: 2rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border: 1px solid var(--primary);
+            border-radius: 4px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        
+        .letter-btn.selected {
+            background-color: var(--primary);
+            color: white;
+        }
+        
+        .modal {
+            position: fixed;
+            top: 0;
+            left: 0;
             width: 100%;
             height: 100%;
-            backface-visibility: hidden;
-            border-radius: 0.35rem;
+            background-color: rgba(0,0,0,0.5);
             display: flex;
-            flex-direction: column;
-            justify-content: center;
             align-items: center;
+            justify-content: center;
+            z-index: 100;
+        }
+        
+        .modal-content {
+            background-color: white;
+            border-radius: 8px;
             padding: 2rem;
-            box-shadow: 0 0.15rem 1.75rem 0 rgba(58, 59, 69, 0.15);
+            width: 500px;
+            max-width: 90vw;
+            max-height: 90vh;
+            overflow-y: auto;
         }
         
-        .flashcard-front {
-            background-color: var(--flashcard-front);
-            color: black;
-            font-size: 2rem;
-            font-weight: bold;
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 1rem;
+        }
+        
+        .modal-header h2 {
+            color: var(--primary);
+        }
+        
+        .close-btn {
+            background: none;
+            border: none;
+            font-size: 1.5rem;
+            cursor: pointer;
+            color: var(--danger);
+        }
+        
+        .form-group {
+            margin-bottom: 1rem;
+        }
+        
+        .form-group label {
+            display: block;
+            margin-bottom: 0.5rem;
             font-weight: bold;
         }
         
-        .flashcard-back {
-            background-color: var(--flashcard-back);
-            transform: rotateY(180deg);
+        .form-control {
+            width: 100%;
+            padding: 0.75rem;
+            border-radius: 4px;
+            border: 1px solid #ddd;
+        }
+        
+        .summary-page {
+            text-align: center;
+            padding: 2rem 1rem;
+        }
+        
+        .summary-card {
+            background-color: white;
+            border-radius: 8px;
+            padding: 2rem;
+            margin: 2rem auto;
+            max-width: 600px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+        }
+        
+        .summary-stat {
             font-size: 1.2rem;
-        }
-        
-        .flashcard-nav {
-            position: absolute;
-            bottom: 1rem;
-            width: calc(100% - 4rem);
+            margin: 1rem 0;
             display: flex;
             justify-content: space-between;
         }
         
-        /* Quiz styles */
-        .quiz-option {
+        .summary-stat-value {
+            font-weight: bold;
+            color: var(--primary);
+        }
+        
+        .menu-icon {
+            background: none;
+            border: none;
+            font-size: 1.5rem;
             cursor: pointer;
-            transition: all 0.2s;
+            color: var(--primary);
         }
         
-        .quiz-option:hover {
-            background-color: rgba(78, 115, 223, 0.1);
+        .hidden {
+            display: none;
         }
         
-        .quiz-option.correct {
-            background-color: rgba(28, 200, 138, 0.2);
-            border-left: 4px solid var(--correct-color);
+        .flex {
+            display: flex;
         }
         
-        .quiz-option.wrong {
-            background-color: rgba(231, 74, 59, 0.2);
-            border-left: 4px solid var(--wrong-color);
+        .dropdown {
+            position: relative;
+            display: inline-block;
         }
         
-        /* Word list styles */
-        .word-item {
-            transition: all 0.2s;
-            border-left: 4px solid transparent;
-            font-weight: bolder;
+        .dropdown-content {
+            display: none;
+            position: absolute;
+            right: 0;
+            background-color: white;
+            min-width: 160px;
+            box-shadow: 0px 8px 16px 0px rgba(0,0,0,0.2);
+            z-index: 1;
+            border-radius: 4px;
         }
         
-        .word-item:hover {
-            background-color: rgba(78, 115, 223, 0.05);
-        }
-        
-        .word-item.marked {
-            border-left: 4px solid var(--primary-color);
-        }
-        
-        .synonym-antonym-badge {
+        .dropdown-content a {
+            color: var(--dark);
+            padding: 12px 16px;
+            text-decoration: none;
+            display: block;
             cursor: pointer;
-            margin-right: 0.3rem;
-            margin-bottom: 0.3rem;
         }
         
-        /* Filter dropdown */
-        .filter-dropdown {
-            min-width: 150px;
-            padding: 1rem;
+        .dropdown-content a:hover {
+            background-color: #f1f1f1;
         }
         
-        /* JSON input styling */
-        #jsonInput {
-            font-family: monospace;
-            min-height: 200px;
+        .show {
+            display: block;
         }
         
-        /* Responsive adjustments */
-        @media (max-width: 768px) {
-            .flashcard-front {
-                font-size: 1.5rem;
-            }
-            
-            .flashcard-back {
-                font-size: 1rem;
-            }
-            .dropdown-menu {
-                left: auto !important; /* Override default left alignment */
-                right: 0 !important; /* Align to the right */
-                width: 100%; /* Make it full-width */
-                max-width: 300px; /* Optional: Limit the width */
-            }
+        .loader {
+            border: 5px solid #f3f3f3;
+            border-top: 5px solid var(--primary);
+            border-radius: 50%;
+            width: 50px;
+            height: 50px;
+            animation: spin 1s linear infinite;
+            margin: 2rem auto;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
         }
     </style>
 </head>
 <body>
-    <!-- Navigation -->
-    <nav class="navbar navbar-expand-lg navbar-dark bg-primary shadow">
-        <div class="container">
-            <a class="navbar-brand" href="#">VocabMaster</a>
-            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
-                <span class="navbar-toggler-icon"></span>
-            </button>
-            <div class="collapse navbar-collapse" id="navbarNav">
-                <ul class="navbar-nav me-auto">
-                    <li class="nav-item">
-                        <a class="nav-link active" href="#" id="addWordTab">Add Words</a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link" href="#" id="reviewTab">Review</a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link" href="#" id="quizTab">Quiz</a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link" href="#" id="matchingTab">Matching</a>
-                    </li>
-                </ul>
-                <div class="d-flex">
-                    <div class="dropdown">
-                        <button class="btn btn-outline-light dropdown-toggle" type="button" id="filterDropdown" data-bs-toggle="dropdown">
-                            <i class="fas fa-filter"></i> Filters
-                        </button>
-                        <div class="dropdown-menu dropdown-menu-end filter-dropdown" aria-labelledby="filterDropdown">
-                            <h6 class="dropdown-header">Review Mode</h6>
-                            <div class="form-check ms-3 mb-2">
-                                <input class="form-check-input" type="radio" name="reviewMode" id="listMode" value="list" checked>
-                                <label class="form-check-label" for="listMode">List View</label>
-                            </div>
-                            <div class="form-check ms-3 mb-3">
-                                <input class="form-check-input" type="radio" name="reviewMode" id="flashcardMode" value="flashcard">
-                                <label class="form-check-label" for="flashcardMode">Flashcards</label>
-                            </div>
-                            
-                            <h6 class="dropdown-header">Time Filter</h6>
-                            <select class="form-select mb-3" id="timeFilter">
-                                <option value="all">All Words</option>
-                                <option value="today">Today's Words</option>
-                                <option value="yesterday">Yesterday's Words</option>
-                                <option value="week">This Week</option>
-                                <option value="lastweek">Last Week</option>
-                                <option value="month">This Month</option>
-                                <option value="lastmonth">Last Month</option>
-                                <option value="custom">Custom Range</option>
-                            </select>
-                            
-                            <div id="customRangeContainer" class="mb-3 d-none">
-                                <label class="form-label">Select Days Ago</label>
-                                <select class="form-select" id="customDays">
-                                    <option value="2">2 days ago</option>
-                                    <option value="3">3 days ago</option>
-                                    <option value="5">5 days ago</option>
-                                    <option value="7">7 days ago</option>
-                                    <option value="10">10 days ago</option>
-                                    <option value="15">15 days ago</option>
-                                    <option value="30">30 days ago</option>
-                                    <option value="60">60 days ago</option>
-                                </select>
-                            </div>
-                            
-                            <h6 class="dropdown-header">Other Filters</h6>
-                            <div class="form-check ms-3 mb-2">
-                                <input class="form-check-input" type="checkbox" id="markedOnly">
-                                <label class="form-check-label" for="markedOnly">Marked Words Only</label>
-                            </div>
-                            <div class="form-check ms-3 mb-3">
-                                <input class="form-check-input" type="checkbox" id="wrongOnly">
-                                <label class="form-check-label" for="wrongOnly">Frequently Wrong Words</label>
-                            </div>
-                            
-                            <h6 class="dropdown-header">Sort By</h6>
-                            <select class="form-select" id="sortBy">
-                                <option value="random">Random</option>
-                                <option value="newest">Newest First</option>
-                                <option value="oldest">Oldest First</option>
-                                <option value="alphabetical">A-Z</option>
-                                <option value="reverseAlpha">Z-A</option>
-                            </select>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </nav>
-
-    <div class="container py-4">
-        <!-- Add Word Section -->
-        <div id="addWordSection">
-            <div class="row">
-                <div class="col-md-6">
-                    <div class="card mb-4">
-                        <div class="card-header">
-                            <i class="fas fa-plus-circle me-2"></i>Add Word Manually
-                        </div>
-                        <div class="card-body">
-                            <form id="manualWordForm">
-                                <div class="mb-3">
-                                    <label for="wordInput" class="form-label">Word*</label>
-                                    <input type="text" class="form-control" id="wordInput" required>
-                                </div>
-                                <div class="mb-3">
-                                    <label for="meaningInput" class="form-label">Meaning</label>
-                                    <textarea class="form-control" id="meaningInput" rows="2"></textarea>
-                                </div>
-                                <div class="mb-3">
-                                    <label for="synonymsInput" class="form-label">Synonyms (comma separated)</label>
-                                    <input type="text" class="form-control" id="synonymsInput">
-                                </div>
-                                <div class="mb-3">
-                                    <label for="antonymsInput" class="form-label">Antonyms (comma separated)</label>
-                                    <input type="text" class="form-control" id="antonymsInput">
-                                </div>
-                                <div class="mb-3">
-                                    <label for="sentenceInput" class="form-label">Example Sentence</label>
-                                    <textarea class="form-control" id="sentenceInput" rows="2"></textarea>
-                                </div>
-                                <div class="mb-3">
-                                    <label for="wrongOptionsInput" class="form-label">Wrong Options for Quiz (comma separated, min 3)</label>
-                                    <input type="text" class="form-control" id="wrongOptionsInput">
-                                </div>
-                                <button type="submit" class="btn btn-primary">Add Word</button>
-                            </form>
-                        </div>
-                    </div>
-                </div>
-                <div class="col-md-6">
-                    <div class="card mb-4">
-                        <div class="card-header">
-                            <i class="fas fa-code me-2"></i>Add Words via JSON
-                        </div>
-                        <div class="card-body">
-                            <div class="mb-3">
-                                <label for="jsonInput" class="form-label">Paste JSON Array of Words</label>
-                                <textarea class="form-control" id="jsonInput" rows="12"></textarea>
-                                <small class="text-muted">Format: {"word": "", "meaning": "", "synonyms": [], "antonyms": [], "sentence": "", "wrongOptions": []}</small>
-                            </div>
-                            <button id="importJsonBtn" class="btn btn-primary">Import Words</button>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <!-- Review Section -->
-        <div id="reviewSection" class="d-none">
-            <div class="card mb-4">
-                <div class="card-header d-flex justify-content-between align-items-center">
-                    <div>
-                        <i class="fas fa-book-open me-2"></i>Review Words
-                    </div>
-                    <div>
-                        <input type="text" id="wordSearch" class="form-control form-control-sm" placeholder="Search words...">
-                    </div>
-                </div>
-                <div class="card-body">
-                    <!-- List View -->
-                    <div id="listView">
-                        <div class="table-responsive">
-                            <table class="table table-hover">
-                                <thead>
-                                    <tr>
-                                        <th>Word</th>
-                                        <th>Meaning</th>
-                                        <th>Actions</th>
-                                    </tr>
-                                </thead>
-                                <tbody id="wordListBody">
-                                    <!-- Word items will be populated here -->
-                                </tbody>
-                            </table>
-                        </div>
-                        <div class="d-flex justify-content-center mt-3">
-                            <nav>
-                                <ul class="pagination" id="wordListPagination">
-                                    <!-- Pagination will be added here -->
-                                </ul>
-                            </nav>
-                        </div>
-                    </div>
-                    
-                    <!-- Flashcard View -->
-                    <div id="flashcardView" class="d-none">
-                        <div class="flashcard-container mb-4">
-                            <div class="flashcard" id="flashcard">
-                                <div class="flashcard-face flashcard-front">
-                                    <div id="flashcardFrontContent"></div>
-                                </div>
-                                <div class="flashcard-face flashcard-back">
-                                    <div id="flashcardBackContent"></div>
-                                    <div class="flashcard-nav">
-                                        <button class="btn btn-sm btn-outline-primary" id="markFlashcardBtn">
-                                            <i class="far fa-bookmark"></i> Mark
-                                        </button>
-                                        <div>
-                                            <span id="flashcardCounter">1/10</span>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="d-flex justify-content-center">
-                            <button class="btn btn-primary mx-2" id="prevFlashcardBtn">
-                                <i class="fas fa-arrow-left"></i> Previous
-                            </button>
-                            <button class="btn btn-primary mx-2" id="flipFlashcardBtn">
-                                <i class="fas fa-sync-alt"></i> Flip
-                            </button>
-                            <button class="btn btn-primary mx-2" id="nextFlashcardBtn">
-                                Next <i class="fas fa-arrow-right"></i>
-                            </button>
-                        </div>
-                        <div class="mt-3 text-center">
-                            <div class="btn-group" role="group">
-                                <input type="radio" class="btn-check" name="flashcardMode" id="wordMode" autocomplete="off" checked>
-                                <label class="btn btn-outline-primary" for="wordMode">Word</label>
-                                
-                                <input type="radio" class="btn-check" name="flashcardMode" id="meaningMode" autocomplete="off">
-                                <label class="btn btn-outline-primary" for="meaningMode">Meaning</label>
-                                
-                                <input type="radio" class="btn-check" name="flashcardMode" id="mixedMode" autocomplete="off">
-                                <label class="btn btn-outline-primary" for="mixedMode">Mixed</label>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <!-- Quiz Section -->
-        <div id="quizSection" class="d-none">
-            <div class="card mb-4">
-                <div class="card-header">
-                    <i class="fas fa-question-circle me-2"></i>Vocabulary Quiz
-                </div>
-                <div class="card-body">
-                    <div id="quizSetup" class="mb-4">
-                        <div class="row">
-                            <div class="col-md-6 mb-3">
-                                <label class="form-label">Quiz Type</label>
-                                <select class="form-select" id="quizType">
-                                    <option value="meaning">Meaning to Word</option>
-                                    <option value="synonym">Find Synonym</option>
-                                </select>
-                            </div>
-                            <div class="col-md-6 mb-3">
-                                <label class="form-label">Number of Questions</label>
-                                <select class="form-select" id="quizCount">
-                                    <option value="10">10</option>
-                                    <option value="20">20</option>
-                                    <option value="30">30</option>
-                                    <option value="50">50</option>
-                                </select>
-                            </div>
-                        </div>
-                        <button id="startQuizBtn" class="btn btn-primary">Start Quiz</button>
-                    </div>
-                    
-                    <div id="quizArea" class="d-none">
-                        <div class="d-flex justify-content-between mb-3">
-                            <div id="quizProgress">Question 1 of 10</div>
-                            <div id="quizScore">Score: 0/0</div>
-                        </div>
-                        <div class="card mb-3">
-                            <div class="card-body">
-                                <h5 id="quizQuestion" class="card-title"></h5>
-                            </div>
-                        </div>
-                        <div id="quizOptions" class="list-group">
-                            <!-- Quiz options will be populated here -->
-                        </div>
-                        <div class="d-flex justify-content-between mt-3">
-                            <button id="quizPrevBtn" class="btn btn-secondary d-none">Previous</button>
-                            <button id="quizNextBtn" class="btn btn-primary ms-auto">Next</button>
-                        </div>
-                    </div>
-                    
-                    <div id="quizResults" class="d-none">
-                        <div class="card">
-                            <div class="card-header bg-success text-white">
-                                <i class="fas fa-trophy me-2"></i>Quiz Results
-                            </div>
-                            <div class="card-body">
-                                <h4 class="card-title">Your Score: <span id="finalScore">0</span>/<span id="totalQuestions">0</span></h4>
-                                <p id="quizFeedback" class="card-text"></p>
-                                <div id="wrongAnswers" class="mt-4">
-                                    <h5>Review Mistakes:</h5>
-                                    <!-- Wrong answers will be listed here -->
-                                </div>
-                                <button id="retryQuizBtn" class="btn btn-primary mt-3">Try Again</button>
-                                <button id="newQuizBtn" class="btn btn-outline-primary mt-3">New Quiz</button>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <!-- Matching Section -->
-        <div id="matchingSection" class="d-none">
-            <div class="card mb-4">
-                <div class="card-header">
-                    <i class="fas fa-random me-2"></i>Matching Game
-                </div>
-                <div class="card-body">
-                    <div id="matchingSetup" class="mb-4">
-                        <div class="row">
-                            <div class="col-md-6 mb-3">
-                                <label class="form-label">Number of Pairs</label>
-                                <select class="form-select" id="matchingCount">
-                                    <option value="5">5</option>
-                                    <option value="10" selected>10</option>
-                                    <option value="15">15</option>
-                                    <option value="20">20</option>
-                                </select>
-                            </div>
-                        </div>
-                        <button id="startMatchingBtn" class="btn btn-primary">Start Matching</button>
-                    </div>
-                    
-                    <div id="matchingGame" class="d-none">
-                        <div class="d-flex justify-content-between mb-3">
-                            <div id="matchingProgress">Pairs matched: 0/10</div>
-                            <div id="matchingTimer">Time: 0:00</div>
-                        </div>
-                        <div class="row">
-                            <div class="col-md-6">
-                                <h5 class="text-center mb-3">Words</h5>
-                                <div id="wordColumn" class="list-group">
-                                    <!-- Words will be populated here -->
-                                </div>
-                            </div>
-                            <div class="col-md-6">
-                                <h5 class="text-center mb-3">Meanings</h5>
-                                <div id="meaningColumn" class="list-group">
-                                    <!-- Meanings will be populated here -->
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                    
-                    <div id="matchingResults" class="d-none">
-                        <div class="card">
-                            <div class="card-header bg-success text-white">
-                                <i class="fas fa-check-circle me-2"></i>Matching Results
-                            </div>
-                            <div class="card-body">
-                                <h4 class="card-title">You matched all pairs!</h4>
-                                <p class="card-text">Time taken: <span id="matchingTimeTaken">0:00</span></p>
-                                <button id="playAgainBtn" class="btn btn-primary">Play Again</button>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
+    <header>
+        <h1>Word Match Game</h1>
+    </header>
+    
+    <div class="container" id="app-container">
+        <!-- Content will be loaded here -->
+        <div class="loader"></div>
     </div>
-
-    <!-- Word Detail Modal -->
-    <div class="modal fade" id="wordDetailModal" tabindex="-1" aria-hidden="true">
-        <div class="modal-dialog modal-lg">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h5 class="modal-title" id="wordDetailTitle"></h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                </div>
-                <div class="modal-body">
-                    <div class="row mb-3">
-                        <div class="col-md-6">
-                            <h6>Meaning:</h6>
-                            <p id="wordDetailMeaning"></p>
-                        </div>
-                        <div class="col-md-6">
-                            <h6>Example Sentence:</h6>
-                            <p id="wordDetailSentence" class="fst-italic"></p>
-                        </div>
-                    </div>
-                    <div class="row">
-                        <div class="col-md-6">
-                            <h6>Synonyms:</h6>
-                            <div id="wordDetailSynonyms"></div>
-                        </div>
-                        <div class="col-md-6">
-                            <h6>Antonyms:</h6>
-                            <div id="wordDetailAntonyms"></div>
-                        </div>
-                    </div>
-                </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
-                    <button type="button" class="btn btn-primary" id="editWordBtn">Edit</button>
-                    <button type="button" class="btn btn-danger" id="deleteWordBtn">Delete</button>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- Edit Word Modal -->
-    <div class="modal fade" id="editWordModal" tabindex="-1" aria-hidden="true">
-        <div class="modal-dialog">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h5 class="modal-title">Edit Word</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                </div>
-                <div class="modal-body">
-                    <form id="editWordForm">
-                        <input type="hidden" id="editWordId">
-                        <div class="mb-3">
-                            <label for="editWordInput" class="form-label">Word*</label>
-                            <input type="text" class="form-control" id="editWordInput" required>
-                        </div>
-                        <div class="mb-3">
-                            <label for="editMeaningInput" class="form-label">Meaning</label>
-                            <textarea class="form-control" id="editMeaningInput" rows="2"></textarea>
-                        </div>
-                        <div class="mb-3">
-                            <label for="editSynonymsInput" class="form-label">Synonyms (comma separated)</label>
-                            <input type="text" class="form-control" id="editSynonymsInput">
-                        </div>
-                        <div class="mb-3">
-                            <label for="editAntonymsInput" class="form-label">Antonyms (comma separated)</label>
-                            <input type="text" class="form-control" id="editAntonymsInput">
-                        </div>
-                        <div class="mb-3">
-                            <label for="editSentenceInput" class="form-label">Example Sentence</label>
-                            <textarea class="form-control" id="editSentenceInput" rows="2"></textarea>
-                        </div>
-                        <div class="mb-3">
-                            <label for="editWrongOptionsInput" class="form-label">Wrong Options for Quiz (comma separated, min 3)</label>
-                            <input type="text" class="form-control" id="editWrongOptionsInput">
-                        </div>
-                    </form>
-                </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                    <button type="button" class="btn btn-primary" id="saveEditWordBtn">Save Changes</button>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- Bootstrap JS Bundle with Popper -->
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     
     <script>
-        // Firebase configuration
+        // Firebase Configuration
         const firebaseConfig = {
-            apiKey: "AIzaSyCV4tM0lGEu1w46YjCkP3j_OKFiGQZDadY",
-  authDomain: "vocab-bfafe.firebaseapp.com",
-  databaseURL: "https://vocab-bfafe-default-rtdb.firebaseio.com",
-  projectId: "vocab-bfafe",
-  storageBucket: "vocab-bfafe.firebasestorage.app",
-  messagingSenderId: "503851407373",
-  appId: "1:503851407373:web:9ae98ad47e4852fb1f1d44"
+            // Replace with your Firebase config
+            apiKey: "AIzaSyDfc0p67p2ZG1aB5XYgT8WVyU3HzsQ0fO4",
+  authDomain: "vocabspaced.firebaseapp.com",
+  projectId: "vocabspaced",
+  storageBucket: "vocabspaced.firebasestorage.app",
+  messagingSenderId: "625582802046",
+  appId: "1:625582802046:web:bd8a55a39733da0ea6042f"
         };
         
         // Initialize Firebase
         firebase.initializeApp(firebaseConfig);
         const db = firebase.firestore();
-        const storage = firebase.storage();
         
-        // DOM elements
-        const addWordSection = document.getElementById('addWordSection');
-        const reviewSection = document.getElementById('reviewSection');
-        const quizSection = document.getElementById('quizSection');
-        const matchingSection = document.getElementById('matchingSection');
+        // App State
+        const state = {
+            currentPage: 'home',
+            gameMode: null,
+            gameData: [],
+            filteredData: [],
+            selectedCards: [],
+            matchedPairs: [],
+            gameStartTime: null,
+            gameEndTime: null,
+            gameStats: {
+                totalPairs: 0,
+                matchedPairs: 0,
+                attempts: 0,
+                wrongAttempts: 0,
+                timeTaken: 0
+            },
+            timer: null,
+            timeElapsed: 0,
+            filters: {
+                level: 'all',
+                letters: [],
+                markedOnly: false,
+                frequentlyWrong: false,
+                random: false,
+                pairCount: 10
+            },
+            showFilterMenu: false,
+            editWordId: null
+        };
         
-        const addWordTab = document.getElementById('addWordTab');
-        const reviewTab = document.getElementById('reviewTab');
-        const quizTab = document.getElementById('quizTab');
-        const matchingTab = document.getElementById('matchingTab');
+        // DOM Elements
+        const appContainer = document.getElementById('app-container');
         
-        // Tab switching
-        addWordTab.addEventListener('click', () => {
-            addWordTab.classList.add('active');
-            reviewTab.classList.remove('active');
-            quizTab.classList.remove('active');
-            matchingTab.classList.remove('active');
+        // Render Functions
+        function renderHomePage() {
+            appContainer.innerHTML = `
+                <div class="home-page">
+                    <h1>Word Match Challenge</h1>
+                    <p>Test your vocabulary by matching words with their meanings. Track your progress, challenge yourself with different difficulty levels, and improve your language skills!</p>
+                    <button class="btn btn-primary" id="start-game-btn">Start Game</button>
+                    <a href="https://sscchele.github.io/voc02/" target="_blank" class="btn btn-outline">Review Vocabulary</a>
+                </div>
+            `;
             
-            addWordSection.classList.remove('d-none');
-            reviewSection.classList.add('d-none');
-            quizSection.classList.add('d-none');
-            matchingSection.classList.add('d-none');
-        });
+            document.getElementById('start-game-btn').addEventListener('click', startGame);
+        }
         
-        reviewTab.addEventListener('click', () => {
-            addWordTab.classList.remove('active');
-            reviewTab.classList.add('active');
-            quizTab.classList.remove('active');
-            matchingTab.classList.remove('active');
-            
-            addWordSection.classList.add('d-none');
-            reviewSection.classList.remove('d-none');
-            quizSection.classList.add('d-none');
-            matchingSection.classList.add('d-none');
-            
-            loadWordsForReview();
-        });
-        
-        quizTab.addEventListener('click', () => {
-            addWordTab.classList.remove('active');
-            reviewTab.classList.remove('active');
-            quizTab.classList.add('active');
-            matchingTab.classList.remove('active');
-            
-            addWordSection.classList.add('d-none');
-            reviewSection.classList.add('d-none');
-            quizSection.classList.remove('d-none');
-            matchingSection.classList.add('d-none');
-        });
-        
-        matchingTab.addEventListener('click', () => {
-            addWordTab.classList.remove('active');
-            reviewTab.classList.remove('active');
-            quizTab.classList.remove('active');
-            matchingTab.classList.add('active');
-            
-            addWordSection.classList.add('d-none');
-            reviewSection.classList.add('d-none');
-            quizSection.classList.add('d-none');
-            matchingSection.classList.remove('d-none');
-        });
-        
-        // Manual word form submission
-        document.getElementById('manualWordForm').addEventListener('submit', async (e) => {
-            e.preventDefault();
-            
-            const word = document.getElementById('wordInput').value.trim();
-            const meaning = document.getElementById('meaningInput').value.trim();
-            const synonyms = document.getElementById('synonymsInput').value.trim().split(',').map(s => s.trim()).filter(s => s);
-            const antonyms = document.getElementById('antonymsInput').value.trim().split(',').map(s => s.trim()).filter(s => s);
-            const sentence = document.getElementById('sentenceInput').value.trim();
-            const wrongOptions = document.getElementById('wrongOptionsInput').value.trim().split(',').map(s => s.trim()).filter(s => s);
-            
-            if (!word) {
-                alert('Word is required');
-                return;
-            }
-            
-            try {
-                await db.collection('vocabulary').add({
-                    word,
-                    meaning,
-                    synonyms,
-                    antonyms,
-                    sentence,
-                    wrongOptions,
-                    createdAt: firebase.firestore.FieldValue.serverTimestamp(),
-                    marked: false,
-                    wrongCount: 0,
-                    lastReviewed: null
-                });
-                
-                alert('Word added successfully!');
-                document.getElementById('manualWordForm').reset();
-            } catch (error) {
-                console.error('Error adding word: ', error);
-                alert('Error adding word. Please try again.');
-            }
-        });
-        
-        // JSON import
-        document.getElementById('importJsonBtn').addEventListener('click', async () => {
-            const jsonInput = document.getElementById('jsonInput').value.trim();
-            
-            if (!jsonInput) {
-                alert('Please paste JSON data');
-                return;
-            }
-            
-            try {
-                const words = JSON.parse(jsonInput);
-                
-                if (!Array.isArray(words)) {
-                    throw new Error('Input should be an array of word objects');
-                }
-                
-                const batch = db.batch();
-                const wordsCollection = db.collection('vocabulary');
-                
-                for (const wordData of words) {
-                    if (!wordData.word) {
-                        continue; // Skip if word is missing
-                    }
+        function renderGamePage() {
+            appContainer.innerHTML = `
+                <div class="game-container">
+                    <div class="game-header">
+                        <div class="timer">Time: 0s</div>
+                        <div class="dropdown">
+                            <button class="menu-icon" id="menu-btn">⋮</button>
+                            <div class="dropdown-content" id="dropdown-menu">
+                                <a id="filter-btn">Filters</a>
+                                <a id="shuffle-btn">Shuffle</a>
+                                <a id="end-game-btn">End Game</a>
+                                <a id="restart-btn">Restart</a>
+                            </div>
+                        </div>
+                    </div>
                     
-                    const wordRef = wordsCollection.doc();
-                    batch.set(wordRef, {
-                        word: wordData.word,
-                        meaning: wordData.meaning || '',
-                        synonyms: wordData.synonyms || [],
-                        antonyms: wordData.antonyms || [],
-                        sentence: wordData.sentence || '',
-                        wrongOptions: wordData.wrongOptions || [],
-                        createdAt: firebase.firestore.FieldValue.serverTimestamp(),
-                        marked: false,
-                        wrongCount: 0,
-                        lastReviewed: null
-                    });
-                }
+                    <div id="filter-menu" class="filter-menu hidden">
+                        <h3>Filter Options</h3>
+                        
+                        <div class="filter-group">
+                            <label>Difficulty Level:</label>
+                            <select id="level-filter" class="form-control">
+                                <option value="all">All Levels</option>
+                                <option value="easy">Easy</option>
+                                <option value="moderate">Moderate</option>
+                                <option value="hard">Hard</option>
+                            </select>
+                        </div>
+                        
+                        <div class="filter-group">
+                            <label>Starting Letter:</label>
+                            <div class="letter-filter" id="letter-filter">
+                                ${generateLetterButtons()}
+                            </div>
+                        </div>
+                        
+                        <div class="filter-group">
+                            <input type="checkbox" id="marked-filter" class="form-check">
+                            <label for="marked-filter">Marked Words Only</label>
+                        </div>
+                        
+                        <div class="filter-group">
+                            <input type="checkbox" id="wrong-filter" class="form-check">
+                            <label for="wrong-filter">Frequently Wrong</label>
+                        </div>
+                        
+                        <div class="filter-group">
+                            <input type="checkbox" id="random-filter" class="form-check">
+                            <label for="random-filter">Random Words</label>
+                        </div>
+                        
+                        <div class="filter-group">
+                            <label>Number of Pairs:</label>
+                            <select id="pair-count-filter" class="form-control">
+                                <option value="5">5 Words</option>
+                                <option value="10" selected>10 Words</option>
+                                <option value="15">15 Words</option>
+                                <option value="20">20 Words</option>
+                            </select>
+                        </div>
+                        
+                        <button class="btn btn-primary" id="apply-filters-btn">Apply Filters</button>
+                        <button class="btn btn-outline" id="close-filter-btn">Close</button>
+                    </div>
+                    
+                    <div class="card-container" id="cards-container">
+                        <!-- Cards will be loaded here -->
+                        <div class="loader"></div>
+                    </div>
+                </div>
+            `;
+            
+            // Add event listeners
+            document.getElementById('menu-btn').addEventListener('click', toggleDropdown);
+            document.getElementById('filter-btn').addEventListener('click', toggleFilterMenu);
+            document.getElementById('shuffle-btn').addEventListener('click', shuffleCards);
+            document.getElementById('end-game-btn').addEventListener('click', endGame);
+            document.getElementById('restart-btn').addEventListener('click', restartGame);
+            document.getElementById('apply-filters-btn').addEventListener('click', applyFilters);
+            document.getElementById('close-filter-btn').addEventListener('click', toggleFilterMenu);
+            
+            // Letter filter buttons
+            const letterButtons = document.querySelectorAll('.letter-btn');
+            letterButtons.forEach(btn => {
+                btn.addEventListener('click', () => {
+                    btn.classList.toggle('selected');
+                    const letter = btn.dataset.letter;
+                    if (btn.classList.contains('selected')) {
+                        if (!state.filters.letters.includes(letter)) {
+                            state.filters.letters.push(letter);
+                        }
+                    } else {
+                        state.filters.letters = state.filters.letters.filter(l => l !== letter);
+                    }
+                });
+            });
+            
+            // Other filter controls
+            document.getElementById('level-filter').addEventListener('change', (e) => {
+                state.filters.level = e.target.value;
+            });
+            
+            document.getElementById('marked-filter').addEventListener('change', (e) => {
+                state.filters.markedOnly = e.target.checked;
+            });
+            
+            document.getElementById('wrong-filter').addEventListener('change', (e) => {
+                state.filters.frequentlyWrong = e.target.checked;
+            });
+            
+            document.getElementById('random-filter').addEventListener('change', (e) => {
+                state.filters.random = e.target.checked;
+            });
+            
+            document.getElementById('pair-count-filter').addEventListener('change', (e) => {
+                state.filters.pairCount = parseInt(e.target.value);
+            });
+            
+            // Update filter UI to match state
+            updateFilterUI();
+            
+            // Start timer
+            startTimer();
+            
+            // Load and render cards
+            fetchAndRenderCards();
+        }
+        
+        function renderSummaryPage() {
+            const { totalPairs, matchedPairs, attempts, wrongAttempts, timeTaken } = state.gameStats;
+            const accuracy = attempts > 0 ? Math.round((matchedPairs * 2 / attempts) * 100) : 0;
+            
+            appContainer.innerHTML = `
+                <div class="summary-page">
+                    <h2>Game Summary</h2>
+                    
+                    <div class="summary-card">
+                        <div class="summary-stat">
+                            <span>Score:</span>
+                            <span class="summary-stat-value">${matchedPairs}/${totalPairs} pairs matched</span>
+                        </div>
+                        
+                        <div class="summary-stat">
+                            <span>Accuracy:</span>
+                            <span class="summary-stat-value">${accuracy}%</span>
+                        </div>
+                        
+                        <div class="summary-stat">
+                            <span>Time Taken:</span>
+                            <span class="summary-stat-value">${formatTime(timeTaken)}</span>
+                        </div>
+                        
+                        <div class="summary-stat">
+                            <span>Total Attempts:</span>
+                            <span class="summary-stat-value">${attempts}</span>
+                        </div>
+                    </div>
+                    
+                    <button class="btn btn-primary" id="play-again-btn">Play Again</button>
+                    <button class="btn btn-outline" id="go-home-btn">Go Home</button>
+                </div>
+            `;
+            
+            document.getElementById('play-again-btn').addEventListener('click', startGame);
+            document.getElementById('go-home-btn').addEventListener('click', () => {
+                state.currentPage = 'home';
+                renderApp();
+            });
+        }
+        
+        function renderEditWordModal(wordData) {
+            const modal = document.createElement('div');
+            modal.className = 'modal';
+            modal.id = 'edit-modal';
+            
+            modal.innerHTML = `
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h2>${wordData.id ? 'Edit Word' : 'Add New Word'}</h2>
+                        <button class="close-btn" id="close-modal-btn">&times;</button>
+                    </div>
+                    
+                    <form id="edit-word-form">
+                        <div class="form-group">
+                            <label for="word-input">Word:</label>
+                            <input type="text" id="word-input" class="form-control" value="${wordData.word || ''}" required>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="meaning-input">Meaning:</label>
+                            <textarea id="meaning-input" class="form-control" rows="3" required>${wordData.meaning || ''}</textarea>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="synonyms-input">Synonyms (comma separated):</label>
+                            <input type="text" id="synonyms-input" class="form-control" value="${wordData.synonyms?.join(', ') || ''}">
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="antonyms-input">Antonyms (comma separated):</label>
+                            <input type="text" id="antonyms-input" class="form-control" value="${wordData.antonyms?.join(', ') || ''}">
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="wrong-options-input">Wrong Options (comma separated):</label>
+                            <input type="text" id="wrong-options-input" class="form-control" value="${wordData.wrongOptions?.join(', ') || ''}">
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="level-input">Difficulty Level:</label>
+                            <select id="level-input" class="form-control">
+                                <option value="easy" ${wordData.level === 'easy' ? 'selected' : ''}>Easy</option>
+                                <option value="moderate" ${wordData.level === 'moderate' ? 'selected' : ''}>Moderate</option>
+                                <option value="hard" ${wordData.level === 'hard' || !wordData.level ? 'selected' : ''}>Hard</option>
+                            </select>
+                        </div>
+                        
+                        <div class="form-group">
+                            <input type="checkbox" id="marked-input" ${wordData.marked ? 'checked' : ''}>
+                            <label for="marked-input">Mark this word</label>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="wrong-count-input">Wrong Count:</label>
+                            <input type="number" id="wrong-count-input" class="form-control" value="${wordData.wrongCount || 0}" min="0">
+                        </div>
+                        
+                        <div class="form-group">
+                            <button type="submit" class="btn btn-primary">${wordData.id ? 'Save Changes' : 'Add Word'}</button>
+                            ${wordData.id ? '<button type="button" class="btn btn-danger" id="delete-word-btn">Delete Word</button>' : ''}
+                        </div>
+                    </form>
+                </div>
+            `;
+            
+            document.body.appendChild(modal);
+            
+            document.getElementById('close-modal-btn').addEventListener('click', () => {
+                modal.remove();
+            });
+            
+            document.getElementById('edit-word-form').addEventListener('submit', (e) => {
+                e.preventDefault();
                 
-                await batch.commit();
-                alert(`${words.length} words imported successfully!`);
-                document.getElementById('jsonInput').value = '';
-            } catch (error) {
-                console.error('Error importing words: ', error);
-                alert('Error importing words. Please check your JSON format.');
-            }
-        });
-        
-        // Review section functionality
-        let currentWords = [];
-        let currentFlashcardIndex = 0;
-        let flashcards = [];
-        
-        async function loadWordsForReview() {
-            try {
-                let query = db.collection('vocabulary');
-        
-                // Apply filters only for review mode
-                const timeFilter = document.getElementById('timeFilter').value;
-                const markedOnly = document.getElementById('markedOnly').checked;
-                const wrongOnly = document.getElementById('wrongOnly').checked;
-                const sortBy = document.getElementById('sortBy').value;
-        
-                if (markedOnly) {
-                    query = query.where('marked', '==', true);
-                }
-        
-                if (wrongOnly) {
-                    query = query.where('wrongCount', '>', 0);
-                }
-        
-                if (timeFilter !== 'all') {
-                    const now = new Date();
-                    let startDate = new Date();
-        
-                    switch (timeFilter) {
-                        case 'today':
-                            startDate.setHours(0, 0, 0, 0);
-                            break;
-                        case 'yesterday':
-                            startDate.setDate(startDate.getDate() - 1);
-                            startDate.setHours(0, 0, 0, 0);
-                            const endDate = new Date(startDate);
-                            endDate.setDate(endDate.getDate() + 1);
-                            query = query.where('createdAt', '>=', startDate)
-                                        .where('createdAt', '<', endDate);
-                            break;
-                        case 'week':
-                            startDate.setDate(startDate.getDate() - 7);
-                            break;
-                        case 'lastweek':
-                            startDate.setDate(startDate.getDate() - 14);
-                            const lastWeekEnd = new Date(startDate);
-                            lastWeekEnd.setDate(lastWeekEnd.getDate() + 7);
-                            query = query.where('createdAt', '>=', startDate)
-                                        .where('createdAt', '<', lastWeekEnd);
-                            break;
-                        case 'month':
-                            startDate.setMonth(startDate.getMonth() - 1);
-                            break;
-                        case 'lastmonth':
-                            startDate.setMonth(startDate.getMonth() - 2);
-                            const lastMonthEnd = new Date(startDate);
-                            lastMonthEnd.setMonth(lastMonthEnd.getMonth() + 1);
-                            query = query.where('createdAt', '>=', startDate)
-                                        .where('createdAt', '<', lastMonthEnd);
-                            break;
-                        case 'custom':
-                            const daysAgo = parseInt(document.getElementById('customDays').value);
-                            startDate.setDate(startDate.getDate() - daysAgo);
-                            const customEnd = new Date(startDate);
-                            customEnd.setDate(customEnd.getDate() + 1);
-                            query = query.where('createdAt', '>=', startDate)
-                                        .where('createdAt', '<', customEnd);
-                            break;
-                    }
-        
-                    if (timeFilter !== 'yesterday' && timeFilter !== 'lastweek' && timeFilter !== 'custom') {
-                        query = query.where('createdAt', '>=', startDate);
-                    }
-                }
-        
-                // Apply sorting
-                switch (sortBy) {
-                    case 'newest':
-                        query = query.orderBy('createdAt', 'desc');
-                        break;
-                    case 'oldest':
-                        query = query.orderBy('createdAt', 'asc');
-                        break;
-                    case 'alphabetical':
-                        query = query.orderBy('word', 'asc');
-                        break;
-                    case 'reverseAlpha':
-                        query = query.orderBy('word', 'desc');
-                        break;
-                    case 'random':
-                        // For random, we'll sort by a random field or shuffle later
-                        break;
-                }
-        
-                const snapshot = await query.get();
-                currentWords = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-        
-                if (sortBy === 'random') {
-                    // Shuffle the array
-                    currentWords = shuffleArray(currentWords);
-                }
-        
-                updateReviewView();
-            } catch (error) {
-                console.error('Error loading words: ', error);
-                alert('Error loading words. Please try again.');
-            }
-        }
-        
-        function updateReviewView() {
-            const reviewMode = document.querySelector('input[name="reviewMode"]:checked').value;
-            
-            if (reviewMode === 'list') {
-                document.getElementById('listView').classList.remove('d-none');
-                document.getElementById('flashcardView').classList.add('d-none');
-                renderWordList();
-            } else {
-                document.getElementById('listView').classList.add('d-none');
-                document.getElementById('flashcardView').classList.remove('d-none');
-                setupFlashcards();
-            }
-        }
-        
-        function renderWordList() {
-            const wordListBody = document.getElementById('wordListBody');
-            wordListBody.innerHTML = '';
-            
-            const searchTerm = document.getElementById('wordSearch').value.toLowerCase();
-            
-            const filteredWords = currentWords.filter(word => 
-                word.word.toLowerCase().includes(searchTerm) || 
-                word.meaning.toLowerCase().includes(searchTerm)
-            );
-            
-            if (filteredWords.length === 0) {
-                wordListBody.innerHTML = '<tr><td colspan="3" class="text-center">No words found</td></tr>';
-                return;
-            }
-            
-            filteredWords.forEach(word => {
-                const row = document.createElement('tr');
-                row.className = `word-item ${word.marked ? 'marked' : ''}`;
-                row.innerHTML = `
-                    <td><strong>${word.word}</strong></td>
-                    <td>${word.meaning || 'No meaning provided'}</td>
-                    <td>
-                        <button class="btn btn-sm btn-outline-primary view-word-btn" data-id="${word.id}">
-                            <i class="fas fa-eye"></i>
-                        </button>
-                        <button class="btn btn-sm btn-outline-secondary edit-word-btn" data-id="${word.id}">
-                            <i class="fas fa-edit"></i>
-                        </button>
-                        <button class="btn btn-sm btn-outline-danger delete-word-btn" data-id="${word.id}">
-                            <i class="fas fa-trash"></i>
-                        </button>
-                        ${word.wrongCount > 0 ? `
-                            <button class="btn btn-sm btn-outline-warning remove-wrong-btn" data-id="${word.id}">
-                                <i class="fas fa-eraser"></i>
-                            </button>
-                        ` : ''}
-                    </td>
-                `;
-                wordListBody.appendChild(row);
-            });
-            
-            // Add event listeners to the buttons
-            document.querySelectorAll('.view-word-btn').forEach(btn => {
-                btn.addEventListener('click', () => showWordDetail(btn.dataset.id));
-            });
-            
-            document.querySelectorAll('.edit-word-btn').forEach(btn => {
-                btn.addEventListener('click', () => editWord(btn.dataset.id));
-            });
-            
-            document.querySelectorAll('.delete-word-btn').forEach(btn => {
-                btn.addEventListener('click', () => deleteWord(btn.dataset.id));
-            });
-
-            document.querySelectorAll('.remove-wrong-btn').forEach(btn => {
-                btn.addEventListener('click', () => removeFromWrongList(btn.dataset.id));
-            });
-        }
-        
-        function setupFlashcards() {
-            flashcards = [...currentWords];
-            currentFlashcardIndex = 0;
-            
-            if (flashcards.length === 0) {
-                document.getElementById('flashcardFrontContent').textContent = 'No words available';
-                document.getElementById('flashcardBackContent').textContent = 'Add words to start reviewing';
-                return;
-            }
-            
-            updateFlashcard();
-        }
-        
-        function updateFlashcard() {
-            if (flashcards.length === 0) return;
-
-            const flashcard = flashcards[currentFlashcardIndex];
-            const flashcardMode = document.querySelector('input[name="flashcardMode"]:checked').value;
-
-            let frontContent = '';
-            let backContent = '';
-
-            if (flashcardMode === 'word') {
-                frontContent = flashcard.word;
-                backContent = `
-                    <p><strong>Meaning:</strong> ${flashcard.meaning || 'No meaning provided'}</p>
-                    ${flashcard.sentence ? `<p class="fst-italic">"${flashcard.sentence}"</p>` : ''}
-                    ${flashcard.synonyms.length > 0 ? `
-                        <p><strong>Synonyms:</strong></p>
-                        <div class="badge-container">
-                            ${flashcard.synonyms.map(s => `<span class="badge bg-primary me-1">${s}</span>`).join('')}
-                        </div>
-                    ` : ''}
-                    ${flashcard.antonyms.length > 0 ? `
-                        <p><strong>Antonyms:</strong></p>
-                        <div class="badge-container">
-                            ${flashcard.antonyms.map(a => `<span class="badge bg-danger me-1">${a}</span>`).join('')}
-                        </div>
-                    ` : ''}
-                `;
-            } else if (flashcardMode === 'meaning') {
-                frontContent = flashcard.meaning || 'No meaning provided';
-                backContent = `
-                    <p><strong>Word:</strong> ${flashcard.word}</p>
-                    ${flashcard.sentence ? `<p class="fst-italic">"${flashcard.sentence}"</p>` : ''}
-                    ${flashcard.synonyms.length > 0 ? `
-                        <p><strong>Synonyms:</strong></p>
-                        <div class="badge-container">
-                            ${flashcard.synonyms.map(s => `<span class="badge bg-primary me-1">${s}</span>`).join('')}
-                        </div>
-                    ` : ''}
-                    ${flashcard.antonyms.length > 0 ? `
-                        <p><strong>Antonyms:</strong></p>
-                        <div class="badge-container">
-                            ${flashcard.antonyms.map(a => `<span class="badge bg-danger me-1">${a}</span>`).join('')}
-                        </div>
-                    ` : ''}
-                `;
-            } else { // mixed
-                if (Math.random() < 0.5) {
-                    frontContent = flashcard.word;
-                    backContent = `
-                        <p><strong>Meaning:</strong> ${flashcard.meaning || 'No meaning provided'}</p>
-                        ${flashcard.sentence ? `<p class="fst-italic">"${flashcard.sentence}"</p>` : ''}
-                        ${flashcard.synonyms.length > 0 ? `
-                            <p><strong>Synonyms:</strong></p>
-                            <div class="badge-container">
-                                ${flashcard.synonyms.map(s => `<span class="badge bg-primary me-1">${s}</span>`).join('')}
-                            </div>
-                        ` : ''}
-                        ${flashcard.antonyms.length > 0 ? `
-                            <p><strong>Antonyms:</strong></p>
-                            <div class="badge-container">
-                                ${flashcard.antonyms.map(a => `<span class="badge bg-danger me-1">${a}</span>`).join('')}
-                            </div>
-                        ` : ''}
-                    `;
+                const updatedWordData = {
+                    word: document.getElementById('word-input').value,
+                    meaning: document.getElementById('meaning-input').value,
+                    synonyms: document.getElementById('synonyms-input').value.split(',').map(s => s.trim()).filter(s => s),
+                    antonyms: document.getElementById('antonyms-input').value.split(',').map(s => s.trim()).filter(s => s),
+                    wrongOptions: document.getElementById('wrong-options-input').value.split(',').map(s => s.trim()).filter(s => s),
+                    level: document.getElementById('level-input').value,
+                    marked: document.getElementById('marked-input').checked,
+                    wrongCount: parseInt(document.getElementById('wrong-count-input').value) || 0,
+                    updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+                };
+                
+                if (wordData.id) {
+                    // Update existing word
+                    db.collection('words').doc(wordData.id).update(updatedWordData)
+                        .then(() => {
+                            modal.remove();
+                            fetchAndRenderCards();
+                        })
+                        .catch(error => {
+                            console.error("Error updating word: ", error);
+                            alert("Error updating word. Please try again.");
+                        });
                 } else {
-                    frontContent = flashcard.meaning || 'No meaning provided';
-                    backContent = `
-                        <p><strong>Word:</strong> ${flashcard.word}</p>
-                        ${flashcard.sentence ? `<p class="fst-italic">"${flashcard.sentence}"</p>` : ''}
-                        ${flashcard.synonyms.length > 0 ? `
-                            <p><strong>Synonyms:</strong></p>
-                            <div class="badge-container">
-                                ${flashcard.synonyms.map(s => `<span class="badge bg-primary me-1">${s}</span>`).join('')}
-                            </div>
-                        ` : ''}
-                        ${flashcard.antonyms.length > 0 ? `
-                            <p><strong>Antonyms:</strong></p>
-                            <div class="badge-container">
-                                ${flashcard.antonyms.map(a => `<span class="badge bg-danger me-1">${a}</span>`).join('')}
-                            </div>
-                        ` : ''}
-                    `;
+                    // Add new word
+                    updatedWordData.createdAt = firebase.firestore.FieldValue.serverTimestamp();
+                    
+                    db.collection('words').add(updatedWordData)
+                        .then(() => {
+                            modal.remove();
+                            fetchAndRenderCards();
+                        })
+                        .catch(error => {
+                            console.error("Error adding word: ", error);
+                            alert("Error adding word. Please try again.");
+                        });
                 }
-            }
-
-            document.getElementById('flashcardFrontContent').innerHTML = frontContent;
-            document.getElementById('flashcardBackContent').innerHTML = backContent;
-            document.getElementById('flashcardCounter').textContent = `${currentFlashcardIndex + 1}/${flashcards.length}`;
-
-            // Update mark button state
-            const markBtn = document.getElementById('markFlashcardBtn');
-            if (flashcard.marked) {
-                markBtn.innerHTML = '<i class="fas fa-bookmark"></i> Marked';
-                markBtn.classList.add('active');
-            } else {
-                markBtn.innerHTML = '<i class="far fa-bookmark"></i> Mark';
-                markBtn.classList.remove('active');
-            }
-
-            // Reset flashcard to front
-            document.getElementById('flashcard').classList.remove('flipped');
-        }
-        
-        // Flashcard navigation
-        document.getElementById('prevFlashcardBtn').addEventListener('click', () => {
-            if (flashcards.length === 0) return;
+            });
             
-            currentFlashcardIndex = (currentFlashcardIndex - 1 + flashcards.length) % flashcards.length;
-            updateFlashcard();
-        });
-        
-        document.getElementById('nextFlashcardBtn').addEventListener('click', () => {
-            if (flashcards.length === 0) return;
-            
-            currentFlashcardIndex = (currentFlashcardIndex + 1) % flashcards.length;
-            updateFlashcard();
-        });
-        
-        document.getElementById('flipFlashcardBtn').addEventListener('click', () => {
-            document.getElementById('flashcard').classList.toggle('flipped');
-        });
-        
-        // Mark flashcard
-        document.getElementById('markFlashcardBtn').addEventListener('click', async () => {
-            if (flashcards.length === 0) return;
-            
-            const wordId = flashcards[currentFlashcardIndex].id;
-            const isMarked = !flashcards[currentFlashcardIndex].marked;
-            
-            try {
-                await db.collection('vocabulary').doc(wordId).update({
-                    marked: isMarked
+            if (wordData.id) {
+                document.getElementById('delete-word-btn').addEventListener('click', () => {
+                    if (confirm("Are you sure you want to delete this word?")) {
+                        db.collection('words').doc(wordData.id).delete()
+                            .then(() => {
+                                modal.remove();
+                                fetchAndRenderCards();
+                            })
+                            .catch(error => {
+                                console.error("Error deleting word: ", error);
+                                alert("Error deleting word. Please try again.");
+                            });
+                    }
                 });
-                
-                // Update local state
-                flashcards[currentFlashcardIndex].marked = isMarked;
-                const wordIndex = currentWords.findIndex(w => w.id === wordId);
-                if (wordIndex !== -1) {
-                    currentWords[wordIndex].marked = isMarked;
-                }
-                
-                updateFlashcard();
-            } catch (error) {
-                console.error('Error updating mark status: ', error);
-                alert('Error updating mark status. Please try again.');
             }
-        });
-        
-        // Flashcard mode change
-        document.querySelectorAll('input[name="flashcardMode"]').forEach(radio => {
-            radio.addEventListener('change', updateFlashcard);
-        });
-        
-        // Word search
-        document.getElementById('wordSearch').addEventListener('input', renderWordList);
-        
-        // Filter changes
-        document.getElementById('timeFilter').addEventListener('change', function() {
-            document.getElementById('customRangeContainer').classList.toggle('d-none', this.value !== 'custom');
-            loadWordsForReview();
-        });
-        
-        document.getElementById('customDays').addEventListener('change', loadWordsForReview);
-        document.getElementById('markedOnly').addEventListener('change', loadWordsForReview);
-        document.getElementById('wrongOnly').addEventListener('change', loadWordsForReview);
-        document.getElementById('sortBy').addEventListener('change', loadWordsForReview);
-        
-        document.querySelectorAll('input[name="reviewMode"]').forEach(radio => {
-            radio.addEventListener('change', updateReviewView);
-        });
-        
-        // Word detail modal
-        function showWordDetail(wordId) {
-            const word = currentWords.find(w => w.id === wordId);
-            if (!word) return;
-            
-            document.getElementById('wordDetailTitle').textContent = word.word;
-            document.getElementById('wordDetailMeaning').textContent = word.meaning || 'No meaning provided';
-            document.getElementById('wordDetailSentence').textContent = word.sentence || 'No example sentence provided';
-            
-            const synonymsContainer = document.getElementById('wordDetailSynonyms');
-            synonymsContainer.innerHTML = word.synonyms.length > 0 ? 
-                word.synonyms.map(s => `<span class="badge bg-primary synonym-antonym-badge">${s}</span>`).join('') : 
-                'No synonyms provided';
-            
-            const antonymsContainer = document.getElementById('wordDetailAntonyms');
-            antonymsContainer.innerHTML = word.antonyms.length > 0 ? 
-                word.antonyms.map(a => `<span class="badge bg-danger synonym-antonym-badge">${a}</span>`).join('') : 
-                'No antonyms provided';
-            
-            // Set the data-id attribute for edit and delete buttons
-            document.getElementById('editWordBtn').dataset.id = wordId;
-            document.getElementById('deleteWordBtn').dataset.id = wordId;
-            
-            const modal = new bootstrap.Modal(document.getElementById('wordDetailModal'));
-            modal.show();
         }
         
-        // Edit word
-        function editWord(wordId) {
-            const word = currentWords.find(w => w.id === wordId);
-            if (!word) return;
-            
-            document.getElementById('editWordId').value = wordId;
-            document.getElementById('editWordInput').value = word.word;
-            document.getElementById('editMeaningInput').value = word.meaning || '';
-            document.getElementById('editSynonymsInput').value = word.synonyms.join(', ');
-            document.getElementById('editAntonymsInput').value = word.antonyms.join(', ');
-            document.getElementById('editSentenceInput').value = word.sentence || '';
-            document.getElementById('editWrongOptionsInput').value = word.wrongOptions.join(', ');
-            
-            const modal = new bootstrap.Modal(document.getElementById('editWordModal'));
-            modal.show();
+        // Helper Functions
+        function generateLetterButtons() {
+            let buttons = '';
+            for (let i = 65; i <= 90; i++) {
+                const letter = String.fromCharCode(i);
+                buttons += `<div class="letter-btn" data-letter="${letter}">${letter}</div>`;
+            }
+            return buttons;
         }
         
-        document.getElementById('saveEditWordBtn').addEventListener('click', async () => {
-            const wordId = document.getElementById('editWordId').value;
-            const word = document.getElementById('editWordInput').value.trim();
-            const meaning = document.getElementById('editMeaningInput').value.trim();
-            const synonyms = document.getElementById('editSynonymsInput').value.trim().split(',').map(s => s.trim()).filter(s => s);
-            const antonyms = document.getElementById('editAntonymsInput').value.trim().split(',').map(s => s.trim()).filter(s => s);
-            const sentence = document.getElementById('editSentenceInput').value.trim();
-            const wrongOptions = document.getElementById('editWrongOptionsInput').value.trim().split(',').map(s => s.trim()).filter(s => s);
-            
-            if (!word) {
-                alert('Word is required');
-                return;
-            }
-            
-            try {
-                await db.collection('vocabulary').doc(wordId).update({
-                    word,
-                    meaning,
-                    synonyms,
-                    antonyms,
-                    sentence,
-                    wrongOptions
-                });
-                
-                // Update local state
-                const wordIndex = currentWords.findIndex(w => w.id === wordId);
-                if (wordIndex !== -1) {
-                    currentWords[wordIndex] = {
-                        ...currentWords[wordIndex],
-                        word,
-                        meaning,
-                        synonyms,
-                        antonyms,
-                        sentence,
-                        wrongOptions
-                    };
-                }
-                
-                // Update flashcards if in flashcard mode
-                if (!document.getElementById('flashcardView').classList.contains('d-none')) {
-                    const flashcardIndex = flashcards.findIndex(f => f.id === wordId);
-                    if (flashcardIndex !== -1) {
-                        flashcards[flashcardIndex] = {
-                            ...flashcards[flashcardIndex],
-                            word,
-                            meaning,
-                            synonyms,
-                            antonyms,
-                            sentence,
-                            wrongOptions
-                        };
-                        if (flashcardIndex === currentFlashcardIndex) {
-                            updateFlashcard();
-                        }
-                    }
-                }
-                
-                alert('Word updated successfully!');
-                bootstrap.Modal.getInstance(document.getElementById('editWordModal')).hide();
-                renderWordList();
-            } catch (error) {
-                console.error('Error updating word: ', error);
-                alert('Error updating word. Please try again.');
-            }
-        });
+        function toggleDropdown() {
+            document.getElementById('dropdown-menu').classList.toggle('show');
+        }
         
-        // Delete word
-        function deleteWord(wordId) {
-            if (!confirm('Are you sure you want to delete this word?')) {
-                return;
+        function toggleFilterMenu() {
+            state.showFilterMenu = !state.showFilterMenu;
+            document.getElementById('filter-menu').classList.toggle('hidden', !state.showFilterMenu);
+            document.getElementById('dropdown-menu').classList.remove('show');
+        }
+        
+        function updateFilterUI() {
+            // Level
+            document.getElementById('level-filter').value = state.filters.level;
+            
+            // Letters
+            const letterButtons = document.querySelectorAll('.letter-btn');
+            letterButtons.forEach(btn => {
+                const letter = btn.dataset.letter;
+                btn.classList.toggle('selected', state.filters.letters.includes(letter));
+            });
+            
+            // Other filters
+            document.getElementById('marked-filter').checked = state.filters.markedOnly;
+            document.getElementById('wrong-filter').checked = state.filters.frequentlyWrong;
+            document.getElementById('random-filter').checked = state.filters.random;
+            document.getElementById('pair-count-filter').value = state.filters.pairCount.toString();
+        }
+        
+        function startTimer() {
+            // Clear any existing timer
+            if (state.timer) {
+                clearInterval(state.timer);
             }
-
-            db.collection('vocabulary').doc(wordId).delete()
-                .then(() => {
-                    // Remove from local state
-                    currentWords = currentWords.filter(w => w.id !== wordId);
-                    flashcards = flashcards.filter(f => f.id !== wordId);
-
-                    if (flashcards.length > 0) {
-                        if (currentFlashcardIndex >= flashcards.length) {
-                            currentFlashcardIndex = Math.max(0, flashcards.length - 1);
-                        }
-                    }
-
-                    alert('Word deleted successfully!');
-
-                    // Safely hide the modal if it exists
-                    const modalInstance = bootstrap.Modal.getInstance(document.getElementById('wordDetailModal'));
-                    if (modalInstance) {
-                        modalInstance.hide();
-                    }
-
-                    updateReviewView();
+            
+            state.timeElapsed = 0;
+            state.gameStartTime = new Date();
+            
+            const timerElement = document.querySelector('.timer');
+            
+            state.timer = setInterval(() => {
+                state.timeElapsed++;
+                timerElement.textContent = `Time: ${formatTime(state.timeElapsed)}`;
+            }, 1000);
+        }
+        
+        function stopTimer() {
+            if (state.timer) {
+                clearInterval(state.timer);
+                state.timer = null;
+                state.gameEndTime = new Date();
+                state.gameStats.timeTaken = state.timeElapsed;
+            }
+        }
+        
+        function formatTime(seconds) {
+            const minutes = Math.floor(seconds / 60);
+            const remainingSeconds = seconds % 60;
+            return `${minutes}:${remainingSeconds.toString().padStart(2, '0')}`;
+        }
+        
+        // Game Logic Functions
+        function startGame() {
+            state.currentPage = 'game';
+            state.selectedCards = [];
+            state.matchedPairs = [];
+            state.gameStats = {
+                totalPairs: 0,
+                matchedPairs: 0,
+                attempts: 0,
+                wrongAttempts: 0,
+                timeTaken: 0
+            };
+            renderApp();
+        }
+        
+        function endGame() {
+            stopTimer();
+            state.currentPage = 'summary';
+            renderApp();
+        }
+        
+        function restartGame() {
+            startGame();
+        }
+        
+        function shuffleCards() {
+            renderCards();
+            document.getElementById('dropdown-menu').classList.remove('show');
+        }
+        
+        function applyFilters() {
+            toggleFilterMenu();
+            fetchAndRenderCards();
+        }
+        
+        function fetchAndRenderCards() {
+            const cardsContainer = document.getElementById('cards-container');
+            cardsContainer.innerHTML = '<div class="loader"></div>';
+            
+            let query = db.collection('words');
+            
+            // Apply level filter
+            if (state.filters.level !== 'all') {
+                query = query.where('level', '==', state.filters.level);
+            }
+            
+            // Apply marked filter
+            if (state.filters.markedOnly) {
+                query = query.where('marked', '==', true);
+            }
+            
+            // Apply frequently wrong filter
+            if (state.filters.frequentlyWrong) {
+                query = query.where('wrongCount', '>', 0).orderBy('wrongCount', 'desc');
+            }
+            
+            // Fetch data
+            query.get()
+                .then(snapshot => {
+                    state.gameData = [];
+                    snapshot.forEach(doc => {
+                        state.gameData.push({
+                            id: doc.id,
+                            ...doc.data()
+                        });
+                    });
+                    
+                    filterAndRenderCards();
                 })
                 .catch(error => {
-                    console.error('Error deleting word: ', error);
-                    alert('Error deleting word. Please try again.');
+                    console.error("Error fetching words: ", error);
+                    cardsContainer.innerHTML = '<p>Error loading words. Please try again.</p>';
                 });
         }
         
-        document.getElementById('deleteWordBtn').addEventListener('click', function() {
-            deleteWord(this.dataset.id);
-        });
-        
-        // Quiz functionality
-        let quizQuestions = [];
-        let currentQuizQuestion = 0;
-        let quizScore = 0;
-        let quizAnswers = [];
-        let quizStartTime;
-        
-        document.getElementById('startQuizBtn').addEventListener('click', async () => {
-            const quizType = document.getElementById('quizType').value;
-            const quizCount = parseInt(document.getElementById('quizCount').value);
-        
-            try {
-                let query = db.collection('vocabulary');
-        
-                // Adjust query based on quiz type
-                if (quizType === 'meaning') {
-                    query = query.where('meaning', '!=', ''); // Ensure words have a meaning
-                } else if (quizType === 'synonym') {
-                    query = query.where('synonyms', 'array-contains-any', ['dummy']); // Dummy value to ensure valid query
-                }
-        
-                const snapshot = await query.get();
-                let words = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-        
-                // Additional filtering after fetching documents
-                if (quizType === 'meaning') {
-                    words = words.filter(word => word.meaning && word.wrongOptions && word.wrongOptions.length >= 3);
-                } else if (quizType === 'synonym') {
-                    words = words.filter(word => word.synonyms && word.synonyms.length > 0);
-                }
-        
-                if (words.length === 0) {
-                    alert('No words available for this quiz type. Add words with the required fields first.');
-                    return;
-                }
-        
-                // Shuffle and select the requested number of words
-                words = shuffleArray(words).slice(0, Math.min(quizCount, words.length));
-        
-                // Prepare quiz questions
-                quizQuestions = words.map(word => {
-                    if (quizType === 'meaning') {
-                        return {
-                            type: 'meaning',
-                            question: word.meaning || 'No meaning provided',
-                            correctAnswer: word.word,
-                            options: shuffleArray([word.word, ...word.wrongOptions]).slice(0, 4),
-                            wordId: word.id
-                        };
-                    } else { // synonym
-                        const correctSynonym = word.synonyms[Math.floor(Math.random() * word.synonyms.length)];
-                        const otherWords = shuffleArray(words.filter(w => w.id !== word.id));
-                        let wrongOptions = [];
-        
-                        for (const otherWord of otherWords) {
-                            if (otherWord.synonyms && otherWord.synonyms.length > 0) {
-                                wrongOptions.push(...otherWord.synonyms.filter(s => s !== correctSynonym));
-                                if (wrongOptions.length >= 3) break;
-                            }
-                        }
-        
-                        while (wrongOptions.length < 3 && otherWords.length > 0) {
-                            const otherWord = otherWords.pop();
-                            if (otherWord.word !== correctSynonym) {
-                                wrongOptions.push(otherWord.word);
-                            }
-                        }
-        
-                        while (wrongOptions.length < 3) {
-                            wrongOptions.push('option ' + (wrongOptions.length + 1));
-                        }
-        
-                        return {
-                            type: 'synonym',
-                            question: word.word,
-                            correctAnswer: correctSynonym,
-                            options: shuffleArray([correctSynonym, ...wrongOptions]).slice(0, 4),
-                            wordId: word.id
-                        };
-                    }
+        function filterAndRenderCards() {
+            let filteredWords = [...state.gameData];
+            
+            // Apply letter filter
+            if (state.filters.letters.length > 0) {
+                filteredWords = filteredWords.filter(word => {
+                    const firstLetter = word.word.charAt(0).toUpperCase();
+                    return state.filters.letters.includes(firstLetter);
                 });
-        
-                currentQuizQuestion = 0;
-                quizScore = 0;
-                quizAnswers = [];
-                quizStartTime = new Date();
-        
-                document.getElementById('quizSetup').classList.add('d-none');
-                document.getElementById('quizArea').classList.remove('d-none');
-                document.getElementById('quizResults').classList.add('d-none');
-        
-                showQuizQuestion();
-            } catch (error) {
-                console.error('Error starting quiz: ', error);
-                alert('Error starting quiz. Please try again.');
             }
-        });
+            
+            // If random is selected, shuffle the words
+            if (state.filters.random) {
+                filteredWords = shuffleArray(filteredWords);
+            }
+            
+            // Limit to the number of pairs
+            filteredWords = filteredWords.slice(0, state.filters.pairCount);
+            
+            // Store the filtered data
+            state.filteredData = filteredWords;
+            state.gameStats.totalPairs = filteredWords.length;
+            
+            // Render the cards
+            renderCards();
+        }
         
-        function showQuizQuestion() {
-            if (currentQuizQuestion >= quizQuestions.length) {
-                showQuizResults();
+        function renderCards() {
+            const cardsContainer = document.getElementById('cards-container');
+            
+            if (!state.filteredData || state.filteredData.length === 0) {
+                cardsContainer.innerHTML = '<p>No words found with the current filters. Try different filters.</p>';
                 return;
             }
-        
-            const question = quizQuestions[currentQuizQuestion];
-            document.getElementById('quizQuestion').textContent = question.question;
-            document.getElementById('quizProgress').textContent = `Question ${currentQuizQuestion + 1} of ${quizQuestions.length}`;
-            document.getElementById('quizScore').textContent = `Score: ${quizScore}/${currentQuizQuestion}`;
-        
-            const optionsContainer = document.getElementById('quizOptions');
-            optionsContainer.innerHTML = '';
-        
-            // Shuffle options to randomize their order
-            const shuffledOptions = shuffleArray([...question.options]);
-        
-            shuffledOptions.forEach((option) => {
-                const optionElement = document.createElement('button');
-                optionElement.className = 'list-group-item list-group-item-action quiz-option';
-                optionElement.textContent = option;
-                optionElement.dataset.option = option;
-                optionsContainer.appendChild(optionElement);
-        
-                optionElement.addEventListener('click', () => {
-                    // Disable all options
-                    document.querySelectorAll('.quiz-option').forEach((opt) => {
-                        opt.disabled = true;
-                    });
-        
-                    // Check if answer is correct
-                    const isCorrect = option === question.correctAnswer;
-        
-                    if (isCorrect) {
-                        optionElement.classList.add('correct');
-                        quizScore++;
-                    } else {
-                        optionElement.classList.add('wrong');
-                        // Highlight the correct answer
-                        document.querySelector(`.quiz-option[data-option="${question.correctAnswer}"]`).classList.add('correct');
-                    }
-        
-                    // Record the answer
-                    quizAnswers.push({
-                        question: question.question,
-                        userAnswer: option,
-                        correctAnswer: question.correctAnswer,
-                        isCorrect,
-                        wordId: question.wordId,
-                    });
-        
-                    // Enable the "Next" button
-                    document.getElementById('quizNextBtn').disabled = false;
+            
+            // Create an array of card objects
+            let cards = [];
+            
+            // Add word cards
+            state.filteredData.forEach(word => {
+                cards.push({
+                    id: word.id,
+                    type: 'word',
+                    content: word.word,
+                    matchId: word.id
                 });
             });
-        
-            // Update navigation buttons
-            document.getElementById('quizPrevBtn').classList.toggle('d-none', currentQuizQuestion === 0);
-            document.getElementById('quizNextBtn').disabled = false; // Always enable the "Next" button
-        }
-        
-        document.getElementById('quizPrevBtn').addEventListener('click', () => {
-            currentQuizQuestion--;
-            showQuizQuestion();
-        });
-        
-        document.getElementById('quizNextBtn').addEventListener('click', () => {
-            currentQuizQuestion++;
-            showQuizQuestion();
-        });
-        
-        function showQuizResults() {
-            document.getElementById('quizArea').classList.add('d-none');
-            document.getElementById('quizResults').classList.remove('d-none');
             
-            const endTime = new Date();
-            const timeTaken = Math.floor((endTime - quizStartTime) / 1000);
-            const minutes = Math.floor(timeTaken / 60);
-            const seconds = timeTaken % 60;
-            
-            document.getElementById('finalScore').textContent = quizScore;
-            document.getElementById('totalQuestions').textContent = quizQuestions.length;
-            
-            const percentage = (quizScore / quizQuestions.length) * 100;
-            let feedback = '';
-            
-            if (percentage >= 90) {
-                feedback = 'Excellent work! You have a strong vocabulary.';
-            } else if (percentage >= 70) {
-                feedback = 'Good job! You know most of these words well.';
-            } else if (percentage >= 50) {
-                feedback = 'Not bad! Keep practicing to improve.';
-            } else {
-                feedback = 'Keep practicing! Review the words you missed.';
-            }
-            
-            document.getElementById('quizFeedback').textContent = feedback;
-            
-            // Show wrong answers
-            const wrongAnswersContainer = document.getElementById('wrongAnswers');
-            wrongAnswersContainer.innerHTML = '';
-            
-            const wrongAnswers = quizAnswers.filter(a => !a.isCorrect);
-            if (wrongAnswers.length > 0) {
-                wrongAnswers.forEach(answer => {
-                    const word = currentWords.find(w => w.id === answer.wordId) || {};
-                    const answerElement = document.createElement('div');
-                    answerElement.className = 'mb-3';
-                    answerElement.innerHTML = `
-                        <p><strong>Question:</strong> ${answer.question}</p>
-                        <p><strong>Your answer:</strong> <span class="text-danger">${answer.userAnswer}</span></p>
-                        <p><strong>Correct answer:</strong> <span class="text-success">${answer.correctAnswer}</span></p>
-                        ${word.word ? `<p><strong>Word:</strong> ${word.word}</p>` : ''}
-                        ${word.synonyms && word.synonyms.length > 0 ? `<p><strong>Synonyms:</strong> ${word.synonyms.join(', ')}</p>` : ''}
-                        <hr>
-                    `;
-                    wrongAnswersContainer.appendChild(answerElement);
+            // Add meaning cards
+            state.filteredData.forEach(word => {
+                cards.push({
+                    id: word.id + '-meaning',
+                    type: 'meaning',
+                    content: word.meaning,
+                    matchId: word.id
                 });
-            } else {
-                wrongAnswersContainer.innerHTML = '<p>You answered all questions correctly! Well done!</p>';
-            }
-            
-            // Update wrong counts in database
-            updateWrongCounts();
-        }
-        
-        async function updateWrongCounts() {
-            const wrongWordIds = quizAnswers
-                .filter(a => !a.isCorrect)
-                .map(a => a.wordId);
-            
-            // Count occurrences of each word ID
-            const wrongCounts = {};
-            wrongWordIds.forEach(id => {
-                wrongCounts[id] = (wrongCounts[id] || 0) + 1;
             });
             
-            // Update each word's wrongCount
-            const batch = db.batch();
-            for (const [wordId, count] of Object.entries(wrongCounts)) {
-                const wordRef = db.collection('vocabulary').doc(wordId);
-                batch.update(wordRef, {
-                    wrongCount: firebase.firestore.FieldValue.increment(count),
-                    lastReviewed: firebase.firestore.FieldValue.serverTimestamp()
-                });
-            }
+            // Shuffle the cards
+            cards = shuffleArray(cards);
             
-            try {
-                await batch.commit();
-            } catch (error) {
-                console.error('Error updating wrong counts: ', error);
-            }
-        }
-        
-        document.getElementById('retryQuizBtn').addEventListener('click', () => {
-            // Reset to first question
-            currentQuizQuestion = 0;
-            quizScore = 0;
-            quizAnswers = [];
-            quizStartTime = new Date();
-            
-            document.getElementById('quizResults').classList.add('d-none');
-            document.getElementById('quizArea').classList.remove('d-none');
-            
-            showQuizQuestion();
-        });
-        
-        document.getElementById('newQuizBtn').addEventListener('click', () => {
-            document.getElementById('quizResults').classList.add('d-none');
-            document.getElementById('quizSetup').classList.remove('d-none');
-        });
-        
-        // Matching game functionality
-        let matchingPairs = [];
-        let matchedPairs = 0;
-        let firstSelection = null;
-        let secondSelection = null;
-        let matchingStartTime;
-        let matchingInterval;
-        
-        document.getElementById('startMatchingBtn').addEventListener('click', async () => {
-            const pairCount = parseInt(document.getElementById('matchingCount').value);
-            
-            try {
-                // Get words for matching game
-                let query = db.collection('vocabulary').where('meaning', '!=', '').limit(50);
-                const snapshot = await query.get();
-                let words = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+            // Render the cards
+            cardsContainer.innerHTML = cards.map(card => {
+                const isMatched = state.matchedPairs.includes(card.matchId);
+                const isSelected = state.selectedCards.some(sc => sc.id === card.id);
                 
-                if (words.length < 5) {
-                    alert('Not enough words with meanings available. Add more words first.');
-                    return;
+                return `
+                    <div class="card ${isMatched ? 'matched' : ''} ${isSelected ? 'selected' : ''}" 
+                         data-id="${card.id}" 
+                         data-type="${card.type}" 
+                         data-match-id="${card.matchId}"
+                         ${isMatched ? 'data-matched="true"' : ''}>
+                        ${card.content}
+                        ${card.type === 'word' && !isMatched ? 
+                          `<div class="dropdown">
+                              <button class="menu-icon card-menu-btn" data-word-id="${card.matchId}">⋮</button>
+                              <div class="dropdown-content card-dropdown" data-dropdown-id="${card.matchId}">
+                                  <a class="edit-word-btn" data-word-id="${card.matchId}">Edit</a>
+                                  <a class="mark-word-btn" data-word-id="${card.matchId}">
+                                      ${getWordById(card.matchId).marked ? 'Unmark' : 'Mark'}
+                                  </a>
+                              </div>
+                           </div>` 
+                          : ''}
+                    </div>
+                `;
+            }).join('');
+            
+            // Add event listeners to cards
+            const cardElements = document.querySelectorAll('.card');
+            cardElements.forEach(card => {
+                if (!card.dataset.matched) {
+                    card.addEventListener('click', handleCardClick);
                 }
-                
-                // Shuffle and select the requested number of words
-                words = shuffleArray(words).slice(0, Math.min(pairCount, words.length));
-                
-                // Prepare matching pairs
-                matchingPairs = words.map(word => ({
-                    word: word.word,
-                    meaning: word.meaning,
-                    id: word.id
-                }));
-                
-                matchedPairs = 0;
-                firstSelection = null;
-                secondSelection = null;
-                
-                document.getElementById('matchingSetup').classList.add('d-none');
-                document.getElementById('matchingGame').classList.remove('d-none');
-                document.getElementById('matchingResults').classList.add('d-none');
-                
-                renderMatchingColumns();
-                
-                // Start timer
-                matchingStartTime = new Date();
-                clearInterval(matchingInterval);
-                matchingInterval = setInterval(updateMatchingTimer, 1000);
-                updateMatchingTimer();
-            } catch (error) {
-                console.error('Error starting matching game: ', error);
-                alert('Error starting matching game. Please try again.');
-            }
-        });
-        
-        function renderMatchingColumns() {
-            const wordColumn = document.getElementById('wordColumn');
-            const meaningColumn = document.getElementById('meaningColumn');
-            
-            wordColumn.innerHTML = '';
-            meaningColumn.innerHTML = '';
-            
-            // Shuffle words and meanings separately
-            const shuffledWords = shuffleArray([...matchingPairs]);
-            const shuffledMeanings = shuffleArray([...matchingPairs]);
-            
-            shuffledWords.forEach((pair, index) => {
-                const wordElement = document.createElement('button');
-                wordElement.className = 'list-group-item list-group-item-action matching-word';
-                wordElement.textContent = pair.word;
-                wordElement.dataset.id = pair.id;
-                wordElement.dataset.index = index;
-                wordColumn.appendChild(wordElement);
-                
-                wordElement.addEventListener('click', handleMatchingSelection);
             });
             
-            shuffledMeanings.forEach((pair, index) => {
-                const meaningElement = document.createElement('button');
-                meaningElement.className = 'list-group-item list-group-item-action matching-meaning';
-                meaningElement.textContent = pair.meaning;
-                meaningElement.dataset.id = pair.id;
-                meaningElement.dataset.index = index;
-                meaningColumn.appendChild(meaningElement);
-                
-                meaningElement.addEventListener('click', handleMatchingSelection);
+            // Add event listeners to card menu buttons
+            const cardMenuBtns = document.querySelectorAll('.card-menu-btn');
+            cardMenuBtns.forEach(btn => {
+                btn.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    toggleCardDropdown(btn.dataset.wordId);
+                });
             });
             
-            document.getElementById('matchingProgress').textContent = `Pairs matched: ${matchedPairs}/${matchingPairs.length}`;
+            // Add event listeners to edit buttons
+            const editBtns = document.querySelectorAll('.edit-word-btn');
+            editBtns.forEach(btn => {
+                btn.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    const wordId = btn.dataset.wordId;
+                    const wordData = getWordById(wordId);
+                    renderEditWordModal(wordData);
+                });
+            });
+            
+            // Add event listeners to mark buttons
+            const markBtns = document.querySelectorAll('.mark-word-btn');
+            markBtns.forEach(btn => {
+                btn.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    const wordId = btn.dataset.wordId;
+                    toggleMarkWord(wordId);
+                });
+            });
         }
         
-        function handleMatchingSelection(e) {
-            const element = e.target;
-
-            // Ignore if already matched or disabled
-            if (element.classList.contains('matched') || element.disabled) {
-                return;
-            }
-
-            // If this is the first selection
-            if (!firstSelection) {
-                firstSelection = {
-                    element,
-                    id: element.dataset.id,
-                    type: element.classList.contains('matching-word') ? 'word' : 'meaning'
-                };
-                element.classList.add('active');
-                return;
-            }
-
-            // Prevent selecting the same element twice
-            if (firstSelection.element === element) {
-                return;
-            }
-
-            // If this is the second selection
-            secondSelection = {
-                element,
-                id: element.dataset.id,
-                type: element.classList.contains('matching-word') ? 'word' : 'meaning'
-            };
-
-            // Disable all elements temporarily
-            document.querySelectorAll('.matching-word, .matching-meaning').forEach(el => {
-                el.disabled = true;
-            });
-
-            // Check if they match (same ID and different types)
-            if (firstSelection.id === secondSelection.id && firstSelection.type !== secondSelection.type) {
-                // Match found
-                firstSelection.element.classList.remove('active');
-                firstSelection.element.classList.add('matched', 'bg-success', 'text-white');
-                secondSelection.element.classList.add('matched', 'bg-success', 'text-white');
-
-                matchedPairs++;
-                document.getElementById('matchingProgress').textContent = `Pairs matched: ${matchedPairs}/${matchingPairs.length}`;
-
-                // Check if game is complete
-                if (matchedPairs === matchingPairs.length) {
-                    clearInterval(matchingInterval);
-                    setTimeout(showMatchingResults, 1000);
+        function toggleCardDropdown(wordId) {
+            const dropdown = document.querySelector(`.card-dropdown[data-dropdown-id="${wordId}"]`);
+            document.querySelectorAll('.card-dropdown').forEach(d => {
+                if (d !== dropdown) {
+                    d.classList.remove('show');
                 }
-
-                // Re-enable unmatched elements
-                document.querySelectorAll('.matching-word:not(.matched), .matching-meaning:not(.matched)').forEach(el => {
-                    el.disabled = false;
-                });
-            } else {
-                // No match - highlight in red
-                firstSelection.element.classList.add('bg-danger', 'text-white');
-                secondSelection.element.classList.add('bg-danger', 'text-white');
-
-                // Reset after delay
+            });
+            dropdown.classList.toggle('show');
+            
+            // Close the dropdown when clicking outside
+            document.addEventListener('click', function closeDropdown(e) {
+                if (!e.target.matches('.card-menu-btn')) {
+                    dropdown.classList.remove('show');
+                    document.removeEventListener('click', closeDropdown);
+                }
+            });
+            
+            // Prevent the click from propagating to the card
+            dropdown.addEventListener('click', (e) => {
+                e.stopPropagation();
+            });
+        }
+        
+        function handleCardClick(e) {
+            const card = e.currentTarget;
+            
+            // Ignore if the card is already matched or selected
+            if (card.dataset.matched === 'true' || card.classList.contains('selected')) {
+                return;
+            }
+            
+            // Ignore if two cards are already selected
+            if (state.selectedCards.length >= 2) {
+                return;
+            }
+            
+            // Select the card
+            card.classList.add('selected');
+            state.selectedCards.push({
+                id: card.dataset.id,
+                type: card.dataset.type,
+                matchId: card.dataset.matchId
+            });
+            
+            // Check for a match if two cards are selected
+            if (state.selectedCards.length === 2) {
+                state.gameStats.attempts++;
+                
                 setTimeout(() => {
-                    if (firstSelection && firstSelection.element) {
-                        firstSelection.element.classList.remove('active', 'bg-danger', 'text-white');
-                    }
-                    if (secondSelection && secondSelection.element) {
-                        secondSelection.element.classList.remove('active', 'bg-danger', 'text-white');
-                    }
-
-                    // Re-enable unmatched elements
-                    document.querySelectorAll('.matching-word:not(.matched), .matching-meaning:not(.matched)').forEach(el => {
-                        el.disabled = false;
-                    });
+                    checkForMatch();
                 }, 1000);
             }
-
-            // Reset selections
-            firstSelection = null;
-            secondSelection = null;
         }
         
-        function updateMatchingTimer() {
-            const now = new Date();
-            const seconds = Math.floor((now - matchingStartTime) / 1000);
-            const minutes = Math.floor(seconds / 60);
-            const remainingSeconds = seconds % 60;
+        function checkForMatch() {
+            const [card1, card2] = state.selectedCards;
             
-            document.getElementById('matchingTimer').textContent = 
-                `Time: ${minutes}:${remainingSeconds < 10 ? '0' : ''}${remainingSeconds}`;
+            if (card1.matchId === card2.matchId && card1.type !== card2.type) {
+                // It's a match!
+                document.querySelector(`[data-id="${card1.id}"]`).classList.add('matched');
+                document.querySelector(`[data-id="${card1.id}"]`).dataset.matched = 'true';
+                document.querySelector(`[data-id="${card2.id}"]`).classList.add('matched');
+                document.querySelector(`[data-id="${card2.id}"]`).dataset.matched = 'true';
+                
+                // Add to matched pairs
+                if (!state.matchedPairs.includes(card1.matchId)) {
+                    state.matchedPairs.push(card1.matchId);
+                    state.gameStats.matchedPairs++;
+                }
+                
+                // Check if all pairs are matched
+                if (state.matchedPairs.length === state.filteredData.length) {
+                    endGame();
+                }
+            } else {
+                // Not a match
+                document.querySelector(`[data-id="${card1.id}"]`).classList.remove('selected');
+                document.querySelector(`[data-id="${card2.id}"]`).classList.remove('selected');
+                
+                state.gameStats.wrongAttempts++;
+                
+                // Increment wrong count for the word
+                if (card1.type === 'word') {
+                    incrementWrongCount(card1.matchId);
+                } else if (card2.type === 'word') {
+                    incrementWrongCount(card2.matchId);
+                }
+            }
+            
+            // Clear selected cards
+            state.selectedCards = [];
         }
         
-        function showMatchingResults() {
-            document.getElementById('matchingGame').classList.add('d-none');
-            document.getElementById('matchingResults').classList.remove('d-none');
-            
-            const now = new Date();
-            const seconds = Math.floor((now - matchingStartTime) / 1000);
-            const minutes = Math.floor(seconds / 60);
-            const remainingSeconds = seconds % 60;
-            
-            document.getElementById('matchingTimeTaken').textContent = 
-                `${minutes}:${remainingSeconds < 10 ? '0' : ''}${remainingSeconds}`;
-
-            // Display all correct matches
-            const wordColumn = document.getElementById('wordColumn');
-            const meaningColumn = document.getElementById('meaningColumn');
-
-            wordColumn.innerHTML = '';
-            meaningColumn.innerHTML = '';
-
-            matchingPairs.forEach(pair => {
-                const wordElement = document.createElement('div');
-                wordElement.className = 'list-group-item bg-success text-white';
-                wordElement.textContent = pair.word;
-
-                const meaningElement = document.createElement('div');
-                meaningElement.className = 'list-group-item bg-success text-white';
-                meaningElement.textContent = pair.meaning;
-
-                wordColumn.appendChild(wordElement);
-                meaningColumn.appendChild(meaningElement);
+        function incrementWrongCount(wordId) {
+            db.collection('words').doc(wordId).update({
+                wrongCount: firebase.firestore.FieldValue.increment(1)
+            }).catch(error => {
+                console.error("Error updating wrong count: ", error);
             });
         }
         
-        document.getElementById('playAgainBtn').addEventListener('click', () => {
-            document.getElementById('matchingResults').classList.add('d-none');
-            document.getElementById('matchingSetup').classList.remove('d-none');
-        });
+        function toggleMarkWord(wordId) {
+            const word = getWordById(wordId);
+            
+            db.collection('words').doc(wordId).update({
+                marked: !word.marked
+            }).then(() => {
+                // Update the word in the state
+                word.marked = !word.marked;
+                
+                // Update the mark button text
+                const markBtn = document.querySelector(`.mark-word-btn[data-word-id="${wordId}"]`);
+                markBtn.textContent = word.marked ? 'Unmark' : 'Mark';
+                
+                // Close the dropdown
+                document.querySelector(`.card-dropdown[data-dropdown-id="${wordId}"]`).classList.remove('show');
+            }).catch(error => {
+                console.error("Error toggling mark: ", error);
+                alert("Error marking word. Please try again.");
+            });
+        }
         
-        // Helper functions
+        function getWordById(id) {
+            return state.filteredData.find(word => word.id === id) || {};
+        }
+        
         function shuffleArray(array) {
             const newArray = [...array];
             for (let i = newArray.length - 1; i > 0; i--) {
@@ -1807,40 +1164,37 @@
             return newArray;
         }
         
-        // Initialize
-        document.addEventListener('DOMContentLoaded', () => {
-            // Set default tab
-            addWordTab.click();
-            
-            // Show/hide custom range based on initial selection
-            document.getElementById('customRangeContainer').classList.toggle('d-none', 
-                document.getElementById('timeFilter').value !== 'custom');
-        });
-
-        async function removeFromWrongList(wordId) {
-            if (!confirm('Are you sure you want to remove this word from the wrong list?')) {
-                return;
-            }
-
-            try {
-                // Update the wrongCount in Firestore
-                await db.collection('vocabulary').doc(wordId).update({
-                    wrongCount: 0
-                });
-
-                // Update the local state
-                const wordIndex = currentWords.findIndex(w => w.id === wordId);
-                if (wordIndex !== -1) {
-                    currentWords[wordIndex].wrongCount = 0;
-                }
-
-                alert('Word removed from the wrong list successfully!');
-                renderWordList();
-            } catch (error) {
-                console.error('Error removing word from wrong list: ', error);
-                alert('Error removing word from the wrong list. Please try again.');
+        // Main App Render Function
+        function renderApp() {
+            switch (state.currentPage) {
+                case 'home':
+                    renderHomePage();
+                    break;
+                case 'game':
+                    renderGamePage();
+                    break;
+                case 'summary':
+                    renderSummaryPage();
+                    break;
+                default:
+                    renderHomePage();
             }
         }
+        
+        // Handle clicks outside of dropdowns
+        window.addEventListener('click', (e) => {
+            if (!e.target.matches('.menu-icon')) {
+                const dropdowns = document.getElementsByClassName('dropdown-content');
+                for (let i = 0; i < dropdowns.length; i++) {
+                    if (dropdowns[i].classList.contains('show')) {
+                        dropdowns[i].classList.remove('show');
+                    }
+                }
+            }
+        });
+        
+        // Initialize the app
+        renderApp();
     </script>
 </body>
 </html>
